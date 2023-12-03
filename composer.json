@@ -1,0 +1,20 @@
+{
+    "name": "devkabir/wp-developer",
+    "description": "A plugin that help to find error on wordpress website.",
+    "type": "wordpress-plugin",
+    "autoload": {
+        "psr-4": {
+            "Kabir\\WpDeveloper\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dev Kabir",
+            "email": "dev.kabir01@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "filp/whoops": "^2.15"
+    }
+}
