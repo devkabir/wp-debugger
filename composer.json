@@ -1,18 +1,16 @@
 {
-    "name": "devkabir/wp-developer",
-    "description": "A plugin that help to find error on wordpress website.",
+    "name": "devkabir/wp-debugger",
+    "description": "A simple tool to help you finding any error on wordpress website.",
     "type": "wordpress-plugin",
-    "autoload": {
-        "psr-4": {
-            "Kabir\\WpDeveloper\\": "src/"
-        }
-    },
     "authors": [
         {
             "name": "Dev Kabir",
             "email": "dev.kabir01@gmail.com"
         }
     ],
+    "config": {
+        "platform-check": false
+    },
     "minimum-stability": "dev",
     "require": {
         "filp/whoops": "^2.15"

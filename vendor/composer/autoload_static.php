@@ -28,7 +28,7 @@ class ComposerStaticInit9e5d03721386db0df479aada1cf2af99
         ),
         'Psr\\Log\\' => 
         array (
-            0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
+            0 => __DIR__ . '/..' . '/psr/log/src',
         ),
         'Kabir\\WpDeveloper\\' => 
         array (
