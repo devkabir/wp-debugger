@@ -15,3 +15,10 @@ This tool is compatible with PHP versions ranging from 7.1 to 8.1.
 Upon successful execution, you’ll see the results as shown in the included image
 
 ![](./result.png)
+
+### Dump any variable data
+- dump a variable by `dump`
+- dump a variable and die there by `dd`
+
+
+![](./dump.png)
