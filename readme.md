@@ -1,14 +1,14 @@
 # WordPress Debugger
 
-WordPress Debugger is a straightforward tool designed to assist you in identifying and resolving errors on your WordPress website.
+WordPress Debugger is a tool designed to identify and resolve errors on a WordPress website.
 
 ## Installation
 
-To install, simply download the tool as a zip file and follow the standard WordPress plugin installation process.
+To install, download the tool as a zip file and follow the standard WordPress plugin installation process.
 
 ## Requirements
 
-This tool is compatible with PHP versions ranging from 7.1 to 8.1.
+This tool is compatible with PHP versions 7.1 to 8.1.
 
 ## Output
 
@@ -17,8 +17,13 @@ Upon successful execution, you’ll see the results as shown in the included ima
 ![](./result.png)
 
 ### Dump any variable data
-- dump a variable by `dump`
-- dump a variable and die there by `dd`
-
-
+- dump a variable using the `dump` function
+- dump a variable and stop execution using the `dd` function
 ![](./dump.png)
+
+### Write a log to debug the API response
+
+```php
+DevKabir\WPDebugger\write_log( 'Plugin Loaded' ); // Write log in the plugin directory.
+DevKabir\WPDebugger\write_log( 'Plugin Loaded', __DIR__ ); // Write log in the directory where the function is called.
+```
