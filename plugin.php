@@ -57,7 +57,7 @@ $whoops->register();
  * @param string $dir The directory where the log file will be written.
  * @return void
  */
-function write_log( $message, string $dir = __DIR__ ) {
+function write_log( $message, string $dir = WP_CONTENT_DIR ) {
 	$message = format_message( $message );
 	error_log($message . PHP_EOL, 3, $dir . '/wp-debugger.log'); // phpcs:ignore
 }
