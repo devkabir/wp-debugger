@@ -31,5 +31,5 @@ DevKabir\WPDebugger\write_log( 'Plugin Loaded', __DIR__ ); // Write log in the d
 ### Write a log to debug SQL queries in your plugin
 ```php
 DevKabir\WPDebugger\write_query(); // Write log in \wp-content folder.
-DevKabir\WPDebugger\write_query( 'Plugin Loaded', __DIR__ ); // Write log in the directory where the function is called.
+DevKabir\WPDebugger\write_query( __DIR__ ); // Write log in the directory where the function is called.
 ```
