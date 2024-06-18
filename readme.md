@@ -8,7 +8,7 @@ To install, download the tool as a zip file and follow the standard WordPress pl
 
 ## Requirements
 
-This tool is compatible with PHP versions 7.1 to 8.1.
+This tool is compatible with PHP versions 7.1 to later
 
 ## Output
 
@@ -26,4 +26,10 @@ Upon successful execution, you’ll see the results as shown in the included ima
 ```php
 DevKabir\WPDebugger\write_log( 'Plugin Loaded' ); // Write log in the plugin directory.
 DevKabir\WPDebugger\write_log( 'Plugin Loaded', __DIR__ ); // Write log in the directory where the function is called.
+```
+
+### Write a log to debug SQL queries in your plugin
+```php
+DevKabir\WPDebugger\write_query(); // Write log in \wp-content folder.
+DevKabir\WPDebugger\write_query( 'Plugin Loaded', __DIR__ ); // Write log in the directory where the function is called.
 ```

@@ -53,13 +53,13 @@ $whoops->register();
 /**
  * Writes a log message to a specified directory.
  *
- * @param mixed $message The message to be logged
- * @param string $dir The directory where the log file will be written
+ * @param mixed  $message The message to be logged.
+ * @param string $dir The directory where the log file will be written.
  * @return void
  */
 function write_log( $message, string $dir = __DIR__ ) {
 	$message = format_message( $message );
-	error_log( $message . PHP_EOL, 3, $dir . '/error.log' ); // phpcs:ignore
+	error_log($message . PHP_EOL, 3, $dir . '/wp-debugger.log'); // phpcs:ignore
 }
 
 /**
@@ -69,7 +69,7 @@ function write_log( $message, string $dir = __DIR__ ) {
  * @return string The formatted message with the timestamp.
  */
 function format_message( $message ) {
-	// format message if it's an array
+	// format message if it's an array.
 	if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
 		$message = wp_json_encode( $message, 128 );
 	} else {
@@ -79,4 +79,23 @@ function format_message( $message ) {
 		}
 	}
 	return gmdate( 'Y-m-d H:i:s' ) . ' - ' . $message;
+}
+
+
+/**
+ * Writes the last SQL query error, query, and result to a log file.
+ *
+ * @param string $dir The directory and filename of the log file. Defaults to WP_CONTENT_DIR.
+ * @return void
+ */
+function write_query( string $dir = WP_CONTENT_DIR ) {
+	global $wpdb;
+	write_log(
+		array(
+			'error'  => $wpdb->last_error,
+			'query'  => $wpdb->last_query,
+			'result' => $wpdb->last_result,
+		),
+		$dir
+	);
 }
