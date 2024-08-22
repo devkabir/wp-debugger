@@ -54,14 +54,18 @@ $whoops->register();
  * Writes a log message to a specified directory.
  *
  * @param mixed  $message The message to be logged.
+ * @param bool   $trace   Whether to log the backtrace.
  * @param string $dir The directory where the log file will be written.
  * @return void
  */
-function write_log( $message, string $dir = WP_CONTENT_DIR ) {
+function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
 	$message = format_message( $message );
-	error_log($message . PHP_EOL, 3, $dir . '/wp-debugger.log'); // phpcs:ignore
-}
+       error_log( $message . PHP_EOL, 3, $dir . '/wp-debugger.log' ); // phpcs:ignore
+	if ( $trace ) {
+           error_log( format_message( array_column( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ), 'file', 'function' ) ) . PHP_EOL, 3, $dir . '/wp-debugger.log' ); // phpcs:ignore
+	}
 
+}
 /**
  * Formats a message with the current timestamp.
  *
@@ -69,23 +73,22 @@ function write_log( $message, string $dir = WP_CONTENT_DIR ) {
  * @return string The formatted message with the timestamp.
  */
 function format_message( $message ) {
-	// format message if it's an array.
+	// Format message if it's an array, object, or iterable.
 	if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
 		$message = wp_json_encode( $message, 128 );
 	} else {
 		$decoded = json_decode( $message );
-		if ( JSON_ERROR_NONE !== json_last_error() ) {
+		if ( JSON_ERROR_NONE === json_last_error() ) {
 			$message = wp_json_encode( $decoded, 128 );
 		}
 	}
 	return gmdate( 'Y-m-d H:i:s' ) . ' - ' . $message;
+
 }
-
-
 /**
  * Writes the last SQL query error, query, and result to a log file.
  *
- * @param string $dir The directory and filename of the log file. Defaults to WP_CONTENT_DIR.
+ * @param string $dir The directory where the log file will be written.
  * @return void
  */
 function write_query( string $dir = WP_CONTENT_DIR ) {
@@ -96,6 +99,7 @@ function write_query( string $dir = WP_CONTENT_DIR ) {
 			'query'  => $wpdb->last_query,
 			'result' => $wpdb->last_result,
 		),
+		false,
 		$dir
 	);
 }
