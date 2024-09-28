@@ -37,7 +37,8 @@ DevKabir\WPDebugger\write_query( __DIR__ ); // Write log in the directory where 
 ## Using as a MU-Plugin
 If you want to use this plugin as a must-use plugin (MU-Plugin), you can easily achieve that by following these steps:
 
-Download or copy the code from the following Gist: MU-Plugin Example Code.
-Paste the code into the wp-content/mu-plugins directory.
-This code will ensure the plugin is automatically activated and loaded, eliminating the need for manual activation.
+- Download or copy the code from the following Gist: [MU-Plugin Example Code](https://gist.github.com/devkabir/78ae9d52ce6faa6f639292ebe48eae17).
+- Paste the code into the wp-content/mu-plugins directory.
+- This code will ensure the plugin is automatically activated and loaded, eliminating the need for manual activation.
+
 Feel free to modify the code according to your needs.
