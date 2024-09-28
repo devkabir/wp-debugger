@@ -33,3 +33,11 @@ DevKabir\WPDebugger\write_log( 'Plugin Loaded', __DIR__ ); // Write log in the d
 DevKabir\WPDebugger\write_query(); // Write log in \wp-content folder.
 DevKabir\WPDebugger\write_query( __DIR__ ); // Write log in the directory where the function is called.
 ```
+
+## Using as a MU-Plugin
+If you want to use this plugin as a must-use plugin (MU-Plugin), you can easily achieve that by following these steps:
+
+Download or copy the code from the following Gist: MU-Plugin Example Code.
+Paste the code into the wp-content/mu-plugins directory.
+This code will ensure the plugin is automatically activated and loaded, eliminating the need for manual activation.
+Feel free to modify the code according to your needs.
