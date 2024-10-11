@@ -10,6 +10,10 @@ use Whoops\Handler\PrettyPageHandler;
 class Plugin {
 
 	public function __construct() {
+		// Check if the plugin should be enabled based on the constant in wp-config.php.
+		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
+			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
+		}
 		$this->debugbar = new DebugBar();
 	}
 
@@ -58,8 +62,6 @@ class Plugin {
 					$transient_key = 'mock_post_data_' . md5( $url . $args['method'] );
 					set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
 				}
-
-				write_log( array( $url, $args, $mock_response ), false, $mock_logs_dir );
 				return json_encode(
 					array(
 						'body'          => $mock_response,

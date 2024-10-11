@@ -68,7 +68,7 @@ function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
 	$message = Plugin::format_log_message( $message );
     error_log($message . PHP_EOL, 3, $log_file); // phpcs:ignore
 	if ( $trace ) {
-		throw new Exception( $message, 1 );
+		init_debugger();
 	}
 }
 
@@ -103,7 +103,9 @@ function log_sql_query( string $dir = WP_CONTENT_DIR ) {
 	);
 }
 
-// Check if the plugin should be enabled based on the constant in wp-config.php.
-if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
-	add_filter( 'pre_http_request', array( $debugger, 'intercept_http_requests' ), 10, 3 );
+/**
+ * Debug from called spot.
+ */
+function init_debugger() {
+	throw new Exception("Debugger initialized", 1);
 }
