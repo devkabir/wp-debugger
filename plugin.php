@@ -65,30 +65,13 @@ function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
 		file_put_contents( $log_file, '' );
 	}
 
-	$message = format_log_message( $message );
+	$message = Plugin::format_log_message( $message );
     error_log($message . PHP_EOL, 3, $log_file); // phpcs:ignore
 	if ( $trace ) {
-        error_log(format_log_message(array_column(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), 'file', 'function')) . PHP_EOL, 3, $log_file); // phpcs:ignore
+		throw new Exception( $message, 1 );
 	}
 }
 
-/**
- * Formats a message with the current timestamp for logging.
- *
- * @param  mixed $message The message to be formatted.
- * @return string The formatted message with the timestamp.
- */
-function format_log_message( $message ) {
-	if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
-		$message = wp_json_encode( $message, 128 );
-	} else {
-		$decoded = json_decode( $message, true );
-		if ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded ) ) {
-			$message = wp_json_encode( $decoded, 128 );
-		}
-	}
-	return gmdate( 'Y-m-d H:i:s' ) . ' - ' . $message;
-}
 
 /**
  * Logs the current WordPress filter hook.

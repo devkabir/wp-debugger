@@ -9,13 +9,16 @@
         }
     ],
     "config": {
-        "platform-check": false
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "lock": false
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
+        "php": ">=7.4",
         "filp/whoops": "^2.15",
-        "symfony/var-dumper": "5.4.x-dev",
-        "maximebf/debugbar": "1.23.x-dev"
+        "maximebf/debugbar": "1.23.x-dev",
+        "symfony/var-dumper": "5.4.x-dev"
     },
     "autoload": {
         "psr-4": {
