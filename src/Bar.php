@@ -4,8 +4,10 @@ namespace DevKabir\WPDebugger;
 
 use DebugBar\DataCollector\MemoryCollector;
 use DebugBar\DataCollector\PhpInfoCollector;
+use DebugBar\DataCollector\RequestDataCollector;
 use DebugBar\DebugBar;
 use DebugBar\JavascriptRenderer;
+use DevKabir\WPDebugger\Collections\HookCollector;
 use DevKabir\WPDebugger\Collections\RemoteRequestCollector;
 
 class Bar extends DebugBar
@@ -27,15 +29,11 @@ class Bar extends DebugBar
         add_action('wp_footer', [$this, 'renderDebugBar']);
         add_action('admin_footer', [$this, 'renderDebugBar']);
 
-        add_action('wp_enqueue_scripts', [$this, 'addRendererAssets']);
-        add_action('admin_enqueue_scripts', [$this, 'addRendererAssets']);
-
-
-        $wpLogFile = WP_CONTENT_DIR . '/debug.log';
-
         $this->addCollector(new PhpInfoCollector());
         $this->addCollector(new MemoryCollector());
-        !wp_doing_ajax() && $this->addCollector(new RemoteRequestCollector());
+        $this->addCollector(new RequestDataCollector());
+        $this->addCollector(new RemoteRequestCollector());
+        $this->addCollector(new HookCollector());
     }
 
     public function handleAjax()
@@ -70,7 +68,7 @@ class Bar extends DebugBar
 
     public function addRendererAssets()
     {
-        wp_enqueue_style('wp_debugger_query_css', plugins_url('vendor/maximebf/debugbar/src/DebugBar/Resources/widgets/sqlqueries/widget.css', FILE));
-        wp_enqueue_script('wp_debugger_query_js', plugins_url('vendor/maximebf/debugbar/src/DebugBar/Resources/widgets/sqlqueries/widget.js', FILE), [], false, true);
+        wp_enqueue_style('wp_debugger_query_css', plugins_url('assets/css/wp-debugger.css', FILE));
+        wp_enqueue_script('wp_debugger_query_js', plugins_url('assets/js/wp-debugger.js', FILE), [], false, true);
     }
 }

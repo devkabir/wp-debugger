@@ -2,9 +2,11 @@
 
 namespace DevKabir\WPDebugger\Collections;
 
+use DebugBar\DataCollector\AssetProvider;
 use DebugBar\DataCollector\DataCollector;
+use DebugBar\DataCollector\Renderable;
 
-class RemoteRequestCollector extends DataCollector {
+class RemoteRequestCollector extends DataCollector implements Renderable, AssetProvider {
     protected $useHtmlVarDumper = true;
     /**
      * @var array
@@ -14,7 +16,7 @@ class RemoteRequestCollector extends DataCollector {
     public function __construct() {
         // Hook into WordPress HTTP API to log wp_remote_request calls
         add_filter('pre_http_request', [$this, 'startRequest'], 10, 3);
-//        add_action('http_api_debug', [$this, 'endRequest'], 10, 5);
+        add_action('http_api_debug', [$this, 'endRequest'], 10, 5);
     }
 
     /**
@@ -26,9 +28,8 @@ class RemoteRequestCollector extends DataCollector {
      * @return bool|array
      */
     public function startRequest($preempt, array $args, string $url) {
-        $this->remoteRequests[$args['method'] ?? 'GET'] = [
-            'url' => $url,
-            'start_time' => microtime(true),
+        $this->remoteRequests[$url] = [
+            'start_time' => (microtime(true)),
         ];
 
         return $preempt;
@@ -44,14 +45,11 @@ class RemoteRequestCollector extends DataCollector {
      * @param string $url
      */
     public function endRequest($response, string $context, string $class, array $args, string $url) {
-        $lastRequestIndex = array_key_last($this->remoteRequests);
-
-        if ($lastRequestIndex !== null && $this->remoteRequests[$lastRequestIndex]['url'] === $url) {
-            $this->remoteRequests[$lastRequestIndex]['end_time'] = microtime(true);
-            $this->remoteRequests[$lastRequestIndex]['duration'] = $this->getDataFormatter()->formatDuration($this->remoteRequests[$lastRequestIndex]['end_time'] - $this->remoteRequests[$lastRequestIndex]['start_time']);
-            $this->remoteRequests[$lastRequestIndex]['response_code'] = is_wp_error($response) ? $response->get_error_message() : $response['response']['code'];
-            $this->remoteRequests[$lastRequestIndex]['transport'] = $class;
-        }
+            $this->remoteRequests[$url]['end_time'] = microtime(true);
+            $this->remoteRequests[$url]['duration'] = $this->getDataFormatter()->formatDuration($this->remoteRequests[$url]['end_time'] - $this->remoteRequests[$url]['start_time']);
+            $this->remoteRequests[$url]['response_code'] = is_wp_error($response) ? $response->get_error_message() : $response['response']['code'];
+            $this->remoteRequests[$url]['transport'] = $class;
+            $this->remoteRequests[$url] = $this->getVarDumper()->renderVar($this->remoteRequests[$url]);
     }
 
     /**
@@ -60,9 +58,7 @@ class RemoteRequestCollector extends DataCollector {
      * @return array
      */
     public function collect() {
-        return [
-            'remote_requests' => $this->getVarDumper()->renderVar($this->remoteRequests),
-        ];
+        return $this->remoteRequests;
     }
 
     /**
@@ -71,7 +67,7 @@ class RemoteRequestCollector extends DataCollector {
      * @return string
      */
     public function getName() {
-        return 'remote-request';
+        return 'api-requests';
     }
 
     /**

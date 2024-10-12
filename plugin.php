@@ -20,8 +20,8 @@
 | If this file is called directly, abort.
 |--------------------------------------------------------------------------
 */
-if ( ! defined( 'ABSPATH' ) ) {
-	die;
+if (!defined('ABSPATH')) {
+    die;
 }
 
 
@@ -39,7 +39,9 @@ define('DevKabir\WPDebugger\FILE', __FILE__);
 | Initiate error page.
 |--------------------------------------------------------------------------
 */
+
 use DevKabir\WPDebugger\Plugin;
+
 $debugger = new Plugin();
 $debugger->init_error_page();
 
@@ -49,65 +51,66 @@ $debugger->init_error_page();
 | Initiate Debugbar
 |--------------------------------------------------------------------------
 */
-$debugger->init_debugbar();
+try {
+    $debugger->init_debugbar();
+} catch (Exception $e) {
+    throw new Exception($e->getMessage(), $e->getCode(), $e);
+}
 
 /**
  * Logs a message to a specified directory.
  *
- * @param  mixed  $message The message to be logged.
- * @param  bool   $trace   Whether to log the backtrace.
- * @param  string $dir     The directory where the log file will be written.
+ * @param mixed $message The message to be logged.
+ * @param bool $trace Whether to log the backtrace.
+ * @param string $dir The directory where the log file will be written.
  * @return void
  */
-function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
-	$log_file = $dir . '/wp-debugger.log';
+function write_log($message, $trace = false, string $dir = WP_CONTENT_DIR)
+{
+    $log_file = $dir . '/wp-debugger.log';
 
-	if ( file_exists( $log_file ) && filesize( $log_file ) > 1 * 1024 * 1024 ) {
-		file_put_contents( $log_file, '' );
-	}
+    if (file_exists($log_file) && filesize($log_file) > 1 * 1024 * 1024) {
+        file_put_contents($log_file, '');
+    }
 
-	$message = Plugin::format_log_message( $message );
+    $message = Plugin::format_log_message($message);
     error_log($message . PHP_EOL, 3, $log_file); // phpcs:ignore
-	if ( $trace ) {
-		init_debugger();
-	}
+    if ($trace) {
+        init_debugger();
+    }
 }
 
 
 /**
  * Logs the current WordPress filter hook.
  *
- * @global string[] $wp_current_filter List of current filters with the current one last.
  * @return void
+ * @global string[] $wp_current_filter List of current filters with the current one last.
  */
-function log_current_filter_hook() {
-	global $wp_current_filter;
-	write_log( implode( ' > ', $wp_current_filter ) );
+function log_current_filter_hook()
+{
+    global $wp_current_filter;
+    write_log(implode(' > ', $wp_current_filter));
 }
 
 /**
  * Logs the last SQL query error, query, and result.
  *
- * @param  string $dir The directory where the log file will be written.
+ * @param string $dir The directory where the log file will be written.
  * @return void
  */
-function log_sql_query( string $dir = WP_CONTENT_DIR ) {
-	global $wpdb;
-	write_log(
-		array(
-			'error'  => $wpdb->last_error,
-			'query'  => $wpdb->last_query,
-			'result' => $wpdb->last_result,
-		),
-		false,
-		$dir
-	);
+function log_sql_query(string $dir = WP_CONTENT_DIR)
+{
+    global $wpdb;
+    write_log(array('error' => $wpdb->last_error, 'query' => $wpdb->last_query, 'result' => $wpdb->last_result,), false, $dir);
 }
 
 /**
  * Debug from called spot.
  */
-function init_debugger() {
-	throw new \Exception( 'Debugger initialized', 1 );
+function init_debugger()
+{
+    throw new Exception('Debugger initialized', 1);
 }
+
 wp_remote_get('https://api.wordpress.org');
