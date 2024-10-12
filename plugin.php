@@ -31,6 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 |--------------------------------------------------------------------------
 */
 require_once __DIR__ . '/vendor/autoload.php';
+define('DevKabir\WPDebugger\FILE', __FILE__);
 
 
 /*
@@ -107,5 +108,6 @@ function log_sql_query( string $dir = WP_CONTENT_DIR ) {
  * Debug from called spot.
  */
 function init_debugger() {
-	throw new Exception("Debugger initialized", 1);
+	throw new \Exception( 'Debugger initialized', 1 );
 }
+wp_remote_get('https://api.wordpress.org');

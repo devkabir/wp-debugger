@@ -81,26 +81,7 @@ class Plugin {
 	}
 
 	public function init_debugbar() {
-		$debugbar         = new StandardDebugBar();
-		$debugbarRenderer = $debugbar->getJavascriptRenderer();
-
-		// Use Debugbar to log queries, data, etc.
-		$debugbar['messages']->addMessage( 'Debugbar is loaded!' );
-
-		// Example usage of logging a database query
-		global $wpdb;
-		$query   = "SELECT * FROM $wpdb->posts LIMIT 10";
-		$results = $wpdb->get_results( $query );
-		$debugbar['messages']->addMessage( 'Query executed: ' . $query );
-		$debugbar['messages']->addMessage( $results );
-		// Add Debugbar HTML and JavaScript to WordPress footer
-		add_action(
-			'wp_footer',
-			function () use ( $debugbarRenderer ) {
-				echo $debugbarRenderer->renderHead();
-				echo $debugbarRenderer->render();
-			}
-		);
+        new Bar();
 	}
 
 	/**
