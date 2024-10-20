@@ -2,13 +2,22 @@
 
 namespace DevKabir\WPDebugger;
 
+use Whoops\Handler\JsonResponseHandler;
 use Whoops\Run;
 use DebugBar\DebugBar;
-use DebugBar\StandardDebugBar;
 use Whoops\Handler\PrettyPageHandler;
-
+/**
+ * Plugin class.
+ */
 class Plugin {
 
+	/**
+	 * Constructor.
+	 *
+	 * Check if the plugin should be enabled based on the constant in wp-config.php.
+	 * If ENABLE_MOCK_HTTP_INTERCEPTOR is defined and true, adds a filter to intercept HTTP requests.
+	 * Initializes the DebugBar.
+	 */
 	public function __construct() {
 		// Check if the plugin should be enabled based on the constant in wp-config.php.
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
@@ -17,12 +26,25 @@ class Plugin {
 		$this->debugbar = new DebugBar();
 	}
 
+	/**
+	 * Initializes the error page.
+	 *
+	 * This registers the error page with Whoops. The error page is a
+	 * PrettyPageHandler with the editor set to VSCode.
+	 *
+	 * @return $this
+	 */
 	public function init_error_page() {
 		$whoops = new Run();
-		$page   = new PrettyPageHandler();
-		$page->setEditor( 'vscode' );
+		if ( wp_doing_ajax() ) {
+			$page = new JsonResponseHandler();
+		} else {
+			$page = new PrettyPageHandler();
+			$page->setEditor( 'vscode' );
+		}
 		$whoops->pushHandler( $page );
 		$whoops->register();
+		return $this;
 	}
 
 	/**
@@ -80,8 +102,17 @@ class Plugin {
 		return new \WP_Error( '404', 'Interceptor enabled by wp-logger plugin.' );
 	}
 
+	/**
+	 * Initializes the DebugBar.
+	 *
+	 * Instantiates the DebugBar\StandardDebugBar class which sets up the
+	 * DebugBar with default collectors and renders the bar.
+	 *
+	 * @return static
+	 */
 	public function init_debugbar() {
-        new Bar();
+		new Bar();
+		return $this;
 	}
 
 	/**
