@@ -2,9 +2,8 @@
 
 namespace DevKabir\WPDebugger;
 
-use Whoops\Handler\JsonResponseHandler;
 use Whoops\Run;
-use DebugBar\DebugBar;
+use Whoops\Handler\JsonResponseHandler;
 use Whoops\Handler\PrettyPageHandler;
 /**
  * Plugin class.
@@ -12,27 +11,30 @@ use Whoops\Handler\PrettyPageHandler;
 class Plugin {
 
 	/**
-	 * Constructor.
+	 * The instance of the plugin.
 	 *
-	 * Check if the plugin should be enabled based on the constant in wp-config.php.
-	 * If ENABLE_MOCK_HTTP_INTERCEPTOR is defined and true, adds a filter to intercept HTTP requests.
-	 * Initializes the DebugBar.
+	 * @var Plugin|null
 	 */
-	public function __construct() {
-		// Check if the plugin should be enabled based on the constant in wp-config.php.
-		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
-			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
+	public static $instance = null;
+
+	/**
+	 * Returns the instance of this plugin.
+	 * Ensures that only one instance is created.
+	 *
+	 * @return Plugin The instance of this plugin.
+	 */
+	public static function get_instance(): Plugin {
+		if ( ! isset( self::$instance ) ) {
+			self::$instance = new self();
 		}
-		$this->debugbar = new DebugBar();
+
+		return self::$instance;
 	}
 
 	/**
-	 * Initializes the error page.
-	 *
-	 * This registers the error page with Whoops. The error page is a
-	 * PrettyPageHandler with the editor set to VSCode.
-	 *
-	 * @return $this
+	 * Initializes the error page setup for handling errors using Whoops library.
+	 * Sets up different handlers based on the context, such as JsonResponseHandler for AJAX requests
+	 * and PrettyPageHandler for other requests. Registers the handlers with Whoops.
 	 */
 	public function init_error_page() {
 		$whoops = new Run();
@@ -71,7 +73,7 @@ class Plugin {
 			'/hosting' =>
 				array(
 					'is_enabled' => false,
-					'waf'        => array(
+					'waf' => array(
 						'is_active' => false,
 					),
 				),
@@ -80,19 +82,19 @@ class Plugin {
 		foreach ( $mock_urls as $mock_url => $mock_response ) {
 			if ( strpos( $url, $mock_url ) !== false ) {
 				if ( isset( $args['method'] ) && strtoupper( $args['method'] ) === 'POST' && isset( $args['body'] ) ) {
-					$post_data     = wp_parse_args( $args['body'] );
+					$post_data = wp_parse_args( $args['body'] );
 					$transient_key = 'mock_post_data_' . md5( $url . $args['method'] );
 					set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
 				}
 				return json_encode(
 					array(
-						'body'          => $mock_response,
-						'response'      => array(
-							'code'    => 200,
+						'body' => $mock_response,
+						'response' => array(
+							'code' => 200,
 							'message' => 'OK',
 						),
-						'headers'       => array(),
-						'cookies'       => array(),
+						'headers' => array(),
+						'cookies' => array(),
 						'http_response' => null,
 					)
 				);
@@ -103,16 +105,22 @@ class Plugin {
 	}
 
 	/**
-	 * Initializes the DebugBar.
+	 * Initializes the plugin, enabling the error page and HTTP request interceptor based on constants.
 	 *
-	 * Instantiates the DebugBar\StandardDebugBar class which sets up the
-	 * DebugBar with default collectors and renders the bar.
-	 *
-	 * @return static
+	 * Checks if the ENABLE_MOCK_HTTP_INTERCEPTOR constant is defined and true, and if so, enables the HTTP
+	 * request interceptor. Also checks if the skip_error_page GET parameter is not set, and if so, enables
+	 * the error page.
 	 */
-	public function init_debugbar() {
-		new Bar();
-		return $this;
+	public function init() {
+		// Check if the plugin should be enabled based on the constant in wp-config.php.
+		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
+			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
+		}
+		$skip_error_page = sanitize_text_field( wp_unslash( $_GET['skip_error_page'] ?? '' ) );
+		if ( empty( $skip_error_page ) ) {
+			$this->init_error_page();
+			new Bar();
+		}
 	}
 
 	/**
