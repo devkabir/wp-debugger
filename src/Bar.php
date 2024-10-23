@@ -12,10 +12,17 @@ use DevKabir\WPDebugger\Collections\RemoteRequestCollector;
 
 class Bar extends DebugBar {
 	protected JavascriptRenderer $renderer;
+	public static $instance = null;
 
-	public function __construct() {
+	public static function get_instance(): Bar {
+		if ( ! isset( self::$instance ) ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
+	private function __construct() {
 		$this->renderer = $this->getJavascriptRenderer();
-		$this->renderer->setOptions( array( 'base_url' => plugins_url( 'vendor/maximebf/debugbar/src/DebugBar/Resources/', FILE ) ) );
 		$this->renderer->setIncludeVendors( true );
 
 		add_action( 'init', [ $this, 'handleAjax' ] );

@@ -40,7 +40,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 | Initiate error page.
 |--------------------------------------------------------------------------
 */
-add_action( 'setup_theme', array( DevKabir\WPDebugger\Plugin::get_instance(), 'init' ) );
+add_action( 'setup_theme', array( DevKabir\WPDebugger\Plugin::class, 'get_instance' ) );
 
 /**
  * Logs a message to a specified directory.
@@ -51,17 +51,7 @@ add_action( 'setup_theme', array( DevKabir\WPDebugger\Plugin::get_instance(), 'i
  * @return void
  */
 function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
-	$log_file = $dir . '/wp-debugger.log';
-
-	if ( file_exists( $log_file ) && filesize( $log_file ) > 1 * 1024 * 1024 ) {
-		file_put_contents( $log_file, '' );
-	}
-
-	$message = DevKabir\WPDebugger\Plugin::format_log_message( $message );
-	error_log( $message . PHP_EOL, 3, $log_file ); // phpcs:ignore
-	if ( $trace ) {
-		init_debugger();
-	}
+	DevKabir\WPDebugger\Plugin::get_instance()->log( $message, $trace, $dir );
 }
 
 /**
@@ -71,5 +61,6 @@ function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
  * @throws Exception
  */
 function init_debugger() {
-	throw new Exception( 'Debugger initialized', 1 );
+	DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
 }
+init_debugger();

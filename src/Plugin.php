@@ -111,7 +111,7 @@ class Plugin {
 	 * request interceptor. Also checks if the skip_error_page GET parameter is not set, and if so, enables
 	 * the error page.
 	 */
-	public function init() {
+	public function __construct() {
 		add_action( 'init', function (): void {
 			wp_deregister_script( 'heartbeat' );
 		} );
@@ -123,6 +123,7 @@ class Plugin {
 		if ( empty( $skip_error_page ) ) {
 			$this->init_error_page();
 		}
+		add_action( 'wp_loaded', [ Bar::class, 'get_instance' ] );
 	}
 
 	/**
@@ -131,7 +132,7 @@ class Plugin {
 	 * @param  mixed $message The message to be formatted.
 	 * @return string The formatted message with the timestamp.
 	 */
-	public static function format_log_message( $message ) {
+	public function format_log_message( $message ) {
 		if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
 			$message = wp_json_encode( $message, 128 );
 		} else {
@@ -141,5 +142,35 @@ class Plugin {
 			}
 		}
 		return gmdate( 'Y-m-d H:i:s' ) . ' - ' . $message;
+	}
+	/**
+	 * Logs a message to a specified directory.
+	 *
+	 * @param mixed  $message The message to be logged.
+	 * @param bool   $trace Whether to log the backtrace.
+	 * @param string $dir The directory where the log file will be written.
+	 * @return void
+	 */
+	public function log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
+		$log_file = $dir . '/wp-debugger.log';
+
+		if ( file_exists( $log_file ) && filesize( $log_file ) > 1 * 1024 * 1024 ) {
+			file_put_contents( $log_file, '' );
+		}
+
+		$message = $this->format_log_message( $message );
+		error_log( $message . PHP_EOL, 3, $log_file ); // phpcs:ignore
+		if ( $trace ) {
+			$this->throw_exception();
+		}
+	}
+
+	/**
+	 * Throws an exception to trigger the error page.
+	 *
+	 * @return void
+	 */
+	public function throw_exception() {
+		throw new \Exception( 'Debugger initialized', 1 );
 	}
 }
