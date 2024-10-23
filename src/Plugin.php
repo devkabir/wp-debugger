@@ -112,6 +112,9 @@ class Plugin {
 	 * the error page.
 	 */
 	public function init() {
+		add_action( 'init', function (): void {
+			wp_deregister_script( 'heartbeat' );
+		} );
 		// Check if the plugin should be enabled based on the constant in wp-config.php.
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
@@ -119,7 +122,6 @@ class Plugin {
 		$skip_error_page = sanitize_text_field( wp_unslash( $_GET['skip_error_page'] ?? '' ) );
 		if ( empty( $skip_error_page ) ) {
 			$this->init_error_page();
-			new Bar();
 		}
 	}
 
