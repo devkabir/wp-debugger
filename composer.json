@@ -1,25 +1,26 @@
 {
-    "name": "devkabir/wp-debugger",
-    "description": "A simple tool to help you finding any error on wordpress website.",
-    "type": "wordpress-plugin",
-    "authors": [
-        {
-            "name": "Dev Kabir",
-            "email": "dev.kabir01@gmail.com"
-        }
-    ],
-    "config": {
-        "sort-packages": true,
-        "optimize-autoloader": true,
-        "lock": false
-    },
-    "minimum-stability": "stable",
-    "require": {
-        "php": ">=7.4"
-    },
-    "autoload": {
-        "psr-4": {
-            "DevKabir\\WPDebugger\\": "src/"
-        }
+  "name": "devkabir/wp-debugger",
+  "description": "A simple tool to help you finding any error on wordpress website.",
+  "type": "wordpress-plugin",
+  "authors": [
+    {
+      "name": "Dev Kabir",
+      "email": "dev.kabir01@gmail.com"
     }
+  ],
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true,
+    "lock": false
+  },
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=7.4",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "DevKabir\\WPDebugger\\": "src/"
+    }
+  }
 }

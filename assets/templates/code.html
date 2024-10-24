@@ -1,8 +1,10 @@
-<div id="file-{{file}}" class="flex flex-col items-center border-indigo-300 hover:shadow-xl hover:shadow-indigo-50 mb-6 p-8 border rounded-2xl w-full">
-    <h4 class="font-medium text-blue-700 text-md">
-        Click to open in VSCode: <a href="{{editor_link}}" class="text-blue-600 hover:underline">{{file}} (Line {{line_number}})</a>
-    </h4>
-    <pre class="w-full language-php line-highlight" data-line-offset="{{start_line}}" data-line="{{line_number}}" data-src="{{file_path}}">
+<h1 class="text-lg mb-2 font-semibold">
+    Open:
+    <a href="{{editor_link}}" class="text-blue-600 hover:underline">
+        {{file}} (Line {{line_number}})
+    </a>
+</h1>
+<pre class="w-full language-php line-highlight" data-line-offset="{{start_line}}" data-line="{{line_number}}"
+    data-src="{{file_path}}">
         <code class="language-php" >{{code_snippet}}</code>
-    </pre>
-</div>
+</pre>

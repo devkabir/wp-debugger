@@ -9,17 +9,8 @@
     <link href="{{prism_css_url}}" rel="stylesheet">
 </head>
 
-<body class="mx-auto p-10 w-full container">
-    <h2 class="mb-4 font-semibold text-2xl">{{exception_message}}</h2>
-    <div class="mt-5">
-        <h3 class="mb-2 font-semibold text-lg">Code Snippets:</h3>
-        {{code_snippets}}
-    </div>
-    <div class="mt-5">
-        <h3 class="mb-2 font-semibold text-lg">Superglobals:</h3>
-        {{superglobals}}
-    </div>
-
+<body class="bg-gray-200 text-gray-800">
+    {{content}}
     <script src="{{prism_js_url}}"></script>
     <script>
         Prism.highlightAll();

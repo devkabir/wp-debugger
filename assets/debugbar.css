@@ -1,0 +1,24 @@
+/* debug_bar.css */
+#debug-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #333;
+    color: #fff;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 999999;
+    text-align: end;
+    padding: 5px;
+}
+
+#debug-bar .debug-section {
+    margin-right: 20px;
+    display: inline-block;
+}
+
+#debug-bar .debug-section strong {
+    display: block;
+    font-weight: bold;
+    color: #ffcc00;
+}

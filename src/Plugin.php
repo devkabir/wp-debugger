@@ -38,6 +38,8 @@ class Plugin {
 		$skip_error_page = sanitize_text_field( wp_unslash( $_GET['skip_error_page'] ?? '' ) );
 		if ( empty( $skip_error_page ) ) {
 			new ErrorPage();
+			// DebugBar::get_instance();
+			new DebugBar();
 		}
 	}
 
