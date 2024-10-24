@@ -15,10 +15,7 @@
     },
     "minimum-stability": "stable",
     "require": {
-        "php": ">=7.4",
-        "filp/whoops": "^2.15",
-        "maximebf/debugbar": "1.23.x-dev",
-        "symfony/var-dumper": "5.4.x-dev"
+        "php": ">=7.4"
     },
     "autoload": {
         "psr-4": {

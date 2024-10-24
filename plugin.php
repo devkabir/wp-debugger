@@ -63,4 +63,3 @@ function write_log( $message, $trace = false, string $dir = WP_CONTENT_DIR ) {
 function init_debugger() {
 	DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
 }
-init_debugger();
