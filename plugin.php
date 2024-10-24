@@ -40,7 +40,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 | Initiate error page.
 |--------------------------------------------------------------------------
 */
-add_action( 'setup_theme', array( DevKabir\WPDebugger\Plugin::class, 'get_instance' ) );
+DevKabir\WPDebugger\Plugin::get_instance();
 
 /**
  * Logs a message to a specified directory.
