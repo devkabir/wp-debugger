@@ -15,7 +15,7 @@ class Plugin {
 	 *
 	 * @var Plugin|null
 	 */
-	public static ?Plugin $instance = null;
+	private static ?Plugin $instance = null;
 
 	/**
 	 * Initializes the plugin, enabling the error page and HTTP request interceptor based on constants.

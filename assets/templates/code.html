@@ -1,10 +1,10 @@
-<h1 class="text-lg mb-2 font-semibold">
-    Open:
-    <a href="{{editor_link}}" class="text-blue-600 hover:underline">
-        {{file}} (Line {{line_number}})
-    </a>
-</h1>
-<pre class="w-full language-php line-highlight" data-line-offset="{{start_line}}" data-line="{{line_number}}"
-    data-src="{{file_path}}">
-        <code class="language-php" >{{code_snippet}}</code>
-</pre>
+<details class="py-2" {{open}}>
+    <summary class="cursor-pointer text-md font-medium {{even}} p-2 rounded hover:bg-gray-100">
+        Open:
+        <a href="{{editor_link}}" class="text-indigo-600 hover:underline">
+            {{file_path}}
+        </a>
+    </summary>
+    <pre class="language-php line-highlight" data-line-offset="{{start_line}}" data-line="{{line_number}}"
+        data-src="{{file_path}}"><code class="language-php">{{code_snippet}}</code></pre>
+</details>

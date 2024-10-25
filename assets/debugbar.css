@@ -17,8 +17,16 @@
     display: inline-block;
 }
 
-#debug-bar .debug-section strong {
-    display: block;
-    font-weight: bold;
-    color: #ffcc00;
+#debug-bar .debug-section .has_image {
+    margin-right: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+#debug-bar .debug-section .has_image img {
+    width: 16px;
+    height: 16px;
 }

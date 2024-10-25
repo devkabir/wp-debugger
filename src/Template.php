@@ -40,4 +40,15 @@ class Template {
 	public static function compile( array $data, string $template ): string {
 		return str_replace( array_keys( $data ), array_values( $data ), $template );
 	}
+
+	public static function get_layout(): string {
+		return self::compile(
+			array(
+				'{{tailwind_css_url}}' => self::get_asset( 'tailwind.css' ),
+				'{{prism_css_url}}'    => self::get_asset( 'prism.css' ),
+				'{{prism_js_url}}'     => self::get_asset( 'prism.js' ),
+			),
+			self::get_part( 'layout' )
+		);
+	}
 }

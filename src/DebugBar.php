@@ -57,7 +57,20 @@ class DebugBar {
 		$this->start_time   = microtime( true );
 		$this->start_memory = memory_get_usage();
 		add_action( 'admin_enqueue_scripts', array( $this, 'scripts' ) );
-		add_action( 'admin_footer', array( $this, 'render' ) );
+		// add_action( 'admin_footer', array( $this, 'render' ) );
+		add_action( 'wp_loaded', array( $this, 'action_wp_loaded' ) );
+	}
+
+	/**
+	 * This hook is fired once WP, all plugins, and the theme are fully loaded and instantiated.
+	 */
+	public function action_wp_loaded(): void {
+		$end_memory     = memory_get_usage();
+		$end_time       = microtime( true );
+		$execution_time = $this->format_time( $end_time - $this->start_time );
+		$memory_usage   = $this->format_memory( $end_memory - $this->start_memory );
+		$this->add_message( $execution_time, 'timer' );
+		$this->add_message( $memory_usage );
 	}
 
 
@@ -74,11 +87,13 @@ class DebugBar {
 
 	/**
 	 * Adds a message to the debug bar.
-	 *
-	 * @param string $message The message to add to the debug bar.
 	 */
-	public function add_message( $message ) {
-		$this->messages[] = $message;
+	public function add_message( $message, $icon = null ) {
+		if ( ! empty( $icon ) ) {
+			$this->messages[ $icon ] = $message;
+		} else {
+			$this->messages[] = $message;
+		}
 	}
 
 	/**
@@ -89,21 +104,25 @@ class DebugBar {
 	 * added to the debug bar using the `add_message` method.
 	 */
 	public function render() {
-		$end_time       = microtime( true );
-		$end_memory     = memory_get_usage();
-		$execution_time = $end_time - $this->start_time;
-		$memory_usage   = $end_memory - $this->start_memory;
-		$template       = Template::get_part( 'bar' );
-		$part           = Template::get_part( 'bar-item' );
-		$output         = '';
-		$output         = Template::compile( array( '{{item}}' => $this->format_memory( $memory_usage ) ), $part );
-		$output        .= Template::compile( array( '{{item}}' => $this->format_time( $execution_time ) ), $part );
+		init_debugger();
+		$template  = Template::get_part( 'bar' );
+		$part      = Template::get_part( 'bar-item' );
+		$icon_part = Template::get_part( 'bar-item-with-icon' );
+		$output    = '';
 		if ( ! empty( $this->messages ) ) {
-			foreach ( $this->messages as $message ) {
-				$output .= Template::compile( array( '{{item}}' => var_export( $message, true ) ), $part );
+			foreach ( $this->messages as $icon => $message ) {
+				$icon_path = Template::get_asset( 'icons/' . $icon . '.png' );
+				$output   .= Template::compile(
+					array(
+						'{{item}}'      => $message,
+						'{{icon_path}}' => $icon_path,
+						'{{icon}}'      => $icon,
+					),
+					file_exists( $icon_path ) ? $icon_part : $part
+				);
 			}
+			echo Template::compile( array( '{{content}}' => $output ), $template );
 		}
-		echo Template::compile( array( '{{content}}' => $output ), $template );
 	}
 
 	/**
