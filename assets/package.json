@@ -3,6 +3,8 @@
     "tailwindcss": "^3.4.14"
   },
   "scripts": {
-    "watch": "tailwindcss -o ./page.css --watch"
+    "watch:bar": "tailwindcss -c tailwind.bar.config.js -o ./bar.css --watch",
+    "watch:page": "tailwindcss -c tailwind.page.config.js -o ./page.css --watch",
+    "watch": "npm run watch:bar && npm run watch:page"
   }
 }

@@ -57,7 +57,7 @@ class DebugBar {
 		$this->start_time   = microtime( true );
 		$this->start_memory = memory_get_usage();
 		add_action( 'admin_enqueue_scripts', array( $this, 'scripts' ) );
-		// add_action( 'admin_footer', array( $this, 'render' ) );
+		add_action( 'admin_footer', array( $this, 'render' ) );
 		add_action( 'wp_loaded', array( $this, 'action_wp_loaded' ) );
 	}
 
@@ -104,7 +104,6 @@ class DebugBar {
 	 * added to the debug bar using the `add_message` method.
 	 */
 	public function render() {
-		init_debugger();
 		$template  = Template::get_part( 'bar' );
 		$part      = Template::get_part( 'bar-item' );
 		$icon_part = Template::get_part( 'bar-item-with-icon' );

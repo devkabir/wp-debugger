@@ -17,8 +17,8 @@ class Template {
 	 *
 	 * @return string
 	 */
-	public static function get_part( string $name ): string {
-		$template = plugin_dir_path( FILE ) . 'assets/templates/' . $name . '.html';
+	public static function get_part( string $name, string $folder = 'page' ): string {
+		$template = plugin_dir_path( FILE ) . 'assets/templates/' . $folder . '/' . $name . '.html';
 
 		if ( ! file_exists( $template ) ) {
 			die( "Template: $template not found." );
@@ -42,9 +42,9 @@ class Template {
 	public static function get_layout(): string {
 		return self::compile(
 			array(
-				'{{css_url}}' => self::get_asset( 'page.css' ),
+				'{{css_url}}'       => self::get_asset( 'page.css' ),
 				'{{prism_css_url}}' => self::get_asset( 'prism.css' ),
-				'{{prism_js_url}}' => self::get_asset( 'prism.js' ),
+				'{{prism_js_url}}'  => self::get_asset( 'prism.js' ),
 			),
 			self::get_part( 'layout' )
 		);

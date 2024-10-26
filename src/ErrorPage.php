@@ -6,10 +6,10 @@ use Throwable;
 
 class ErrorPage {
 	public function __construct() {
-		register_shutdown_function( array( $this, 'handle_shutdown' ) );
+		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
 		set_exception_handler( array( $this, 'handle' ) );
 		ini_set( 'display_errors', 'off' );
-		error_reporting( -1 );
+		error_reporting( - 1 );
 	}
 
 	public function handle( Throwable $throwable ): void {
@@ -32,26 +32,26 @@ class ErrorPage {
 	 */
 	public function jsonHandler( Throwable $throwable ): void {
 		echo json_encode( array(
-			'message' => $throwable->getMessage(),
-			'file' => $throwable->getFile(),
-			'line' => $throwable->getLine(),
-			'trace' => array_column( $throwable->getTrace(), 'file', 'function' ),
-		), JSON_PRETTY_PRINT );
+				'message' => $throwable->getMessage(),
+				'file'    => $throwable->getFile(),
+				'line'    => $throwable->getLine(),
+				'trace'   => array_column( $throwable->getTrace(), 'file', 'function' ),
+			), JSON_PRETTY_PRINT );
 	}
 
 	/**
 	 * Renders the exception by loading the HTML template and replacing placeholders.
 	 */
 	private function render( Throwable $throwable ) {
-		$layout = Template::get_layout();
-		$data = array(
+		$layout    = Template::get_layout();
+		$data      = array(
 			'{{exception_message}}' => htmlspecialchars( $throwable->getMessage() ),
-			'{{code_snippets}}' => $this->generate_code_snippets( $throwable->getTrace() ),
-			'{{superglobals}}' => $this->generateSuperglobals(),
+			'{{code_snippets}}'     => $this->generate_code_snippets( $throwable->getTrace() ),
+			'{{superglobals}}'      => $this->compile_globals(),
 		);
 		$exception = Template::get_part( 'exception' );
 		$exception = Template::compile( $data, $exception );
-		$output = Template::compile( [ '{{content}}' => $exception,], $layout );
+		$output    = Template::compile( array( '{{content}}' => $exception ), $layout );
 		http_response_code( 500 );
 		echo $output;
 	}
@@ -63,32 +63,32 @@ class ErrorPage {
 	 */
 	private function generate_code_snippets( array $trace ): string {
 		$code_snippet_template = Template::get_part( 'code' );
-		$code_snippets = '';
+		$code_snippets         = '';
 
 		foreach ( $trace as $index => $frame ) {
 			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
 				continue;
 			}
 
-			$file_path = $frame['file'];
-			$line = $frame['line'];
-			$editor = "vscode://file/$file_path:$line";
+			$file_path    = $frame['file'];
+			$line         = $frame['line'];
+			$editor       = "vscode://file/$file_path:$line";
 			$file_content = file_get_contents( $file_path ) ?? '';
-			$lines = explode( "\n", $file_content );
-			$start_line = max( 0, $frame['line'] - 5 );
-			$end_line = min( count( $lines ), $frame['line'] + 5 );
-			$snippet = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
+			$lines        = explode( "\n", $file_content );
+			$start_line   = max( 0, $frame['line'] - 5 );
+			$end_line     = min( count( $lines ), $frame['line'] + 5 );
+			$snippet      = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
 
 			$snippet_placeholders = array(
-				'{{open}}' => $index ? '' : 'open',
-				'{{even}}' => $index % 2 ? '' : 'bg-gray-200',
-				'{{editor_link}}' => htmlspecialchars( $editor ),
-				'{{file_path}}' => htmlspecialchars( $file_path ),
-				'{{start_line}}' => $start_line,
-				'{{end_line}}' => $end_line,
-				'{{line_number}}' => $frame['line'],
+				'{{open}}'         => $index ? '' : 'open',
+				'{{even}}'         => $index % 2 ? '' : 'bg-gray-200',
+				'{{editor_link}}'  => htmlspecialchars( $editor ),
+				'{{file_path}}'    => htmlspecialchars( $file_path ),
+				'{{start_line}}'   => $start_line,
+				'{{end_line}}'     => $end_line,
+				'{{line_number}}'  => $frame['line'],
 				'{{code_snippet}}' => htmlspecialchars( $snippet ),
-				'{{args}}' => $this->dump( $frame['args'] ),
+				'{{args}}'         => $this->dump( $frame['args'] ),
 			);
 
 			$code_snippets .= Template::compile( $snippet_placeholders, $code_snippet_template );
@@ -97,48 +97,47 @@ class ErrorPage {
 		return $code_snippets;
 	}
 
+	public static function dump( $data ): string {
+		return Template::compile( array( '{{content}}' => var_export( $data, true ) ), Template::get_part( 'dump' ) );
+	}
+
 	/**
 	 * Generates the HTML for the superglobals section.
 	 *
 	 * @return string The HTML content for the superglobals.
 	 */
-	private function generateSuperglobals(): string {
+	private function compile_globals(): string {
 		$superglobals = array(
-			'$_GET' => $_GET,
-			'$_POST' => $_POST,
-			'$_SERVER' => $_SERVER,
-			'$_FILES' => $_FILES,
-			'$_COOKIE' => $_COOKIE,
+			'$_GET'     => $_GET,
+			'$_POST'    => $_POST,
+			'$_SERVER'  => $_SERVER,
+			'$_FILES'   => $_FILES,
+			'$_COOKIE'  => $_COOKIE,
 			'$_SESSION' => $_SESSION ?? array(),
-			'$_ENV' => $_ENV,
+			'$_ENV'     => $_ENV,
 		);
 
 		$template = Template::get_part( 'variable' );
-		$output = '';
-		$index = 0;
+		$output   = '';
+		$index    = 0;
 		foreach ( $superglobals as $name => $value ) {
 			if ( empty( $value ) ) {
 				continue;
 			}
 			$data = array(
-				'{{open}}' => $index ? '' : 'open',
-				'{{name}}' => $name,
+				'{{open}}'  => $index ? '' : 'open',
+				'{{name}}'  => $name,
 				'{{value}}' => $this->dump( $value ),
 			);
 
-			++$index;
+			++ $index;
 			$output .= Template::compile( $data, $template );
 		}
 
 		return $output;
 	}
 
-	public static function dump( $data ) {
-		return Template::compile( [ '{{content}}' => var_export( $data, true ) ], Template::get_part( 'dump' ) );
-	}
-
 	public function handle_shutdown(): void {
-		$last_error = error_get_last();
-		$layout = Template::get_part( 'layout' );
+		echo __METHOD__;
 	}
 }

@@ -33,13 +33,10 @@ function init_debugger() {
 function dump( $variable ) {
 	$stylesheet = DevKabir\WPDebugger\Template::get_asset( 'prism.css' );
 	$script = DevKabir\WPDebugger\Template::get_asset( 'prism.js' );
-	if ( is_object( $variable ) ) {
-		$variable = var_export( $variable, true );
-	}
-	$compiledData = DevKabir\WPDebugger\Template::compile( [ '{{content}}' => $variable ], DevKabir\WPDebugger\Template::get_part( 'dump' ) );
+	$compiledData = DevKabir\WPDebugger\Template::compile( [ '{{content}}' => var_export( $variable, true ) ], DevKabir\WPDebugger\Template::get_part( 'dump' ) );
 	echo '<link rel="stylesheet" href="' . $stylesheet . '">';
 	echo '<script src="' . $script . '"></script>';
-	echo '<div style="z-index: 9999; position: relative; width: fit-content;float: right; margin-left: 1em; margin-right: 1em">' . $compiledData . '</div>';
+	echo '<div style="z-index: 9999; position: relative; width: 450px;float: right; margin-left: 1em; margin-right: 1em">' . $compiledData . '</div>';
 }
 
 /**
