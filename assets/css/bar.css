@@ -126,8 +126,16 @@
   margin-top: 1rem
 }
 
+.wp-debugger .mb-2 {
+  margin-bottom: 0.5rem
+}
+
 .wp-debugger .flex {
   display: flex
+}
+
+.wp-debugger .table {
+  display: table
 }
 
 .wp-debugger .h-4 {
@@ -144,6 +152,10 @@
 
 .wp-debugger .w-fill {
   width: -webkit-fill-available
+}
+
+.wp-debugger .min-w-full {
+  min-width: 100%
 }
 
 .wp-debugger .cursor-pointer {
@@ -166,8 +178,8 @@
   gap: 0.5rem
 }
 
-.wp-debugger .text-ellipsis {
-  text-overflow: ellipsis
+.wp-debugger .overflow-auto {
+  overflow: auto
 }
 
 .wp-debugger .rounded {
@@ -187,6 +199,11 @@
   border-color: rgb(209 213 219 / var(--tw-border-opacity))
 }
 
+.wp-debugger .bg-slate-300 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(203 213 225 / var(--tw-bg-opacity))
+}
+
 .wp-debugger .bg-slate-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(248 250 252 / var(--tw-bg-opacity))
@@ -195,6 +212,11 @@
 .wp-debugger .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity))
+}
+
+.wp-debugger .bg-slate-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(241 245 249 / var(--tw-bg-opacity))
 }
 
 .wp-debugger .p-1 {
@@ -210,13 +232,27 @@
   padding-right: 1rem
 }
 
-.wp-debugger .py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem
-}
-
 .wp-debugger .align-baseline {
   vertical-align: baseline
+}
+
+.wp-debugger .capitalize {
+  text-transform: capitalize
+}
+
+.wp-debugger .even\:border-gray-400:nth-child(even) {
+  --tw-border-opacity: 1;
+  border-color: rgb(156 163 175 / var(--tw-border-opacity))
+}
+
+.wp-debugger .even\:bg-slate-100:nth-child(even) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(241 245 249 / var(--tw-bg-opacity))
+}
+
+.wp-debugger .even\:bg-gray-200:nth-child(even) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity))
 }
 
 .wp-debugger .hover\:bg-gray-100:hover {

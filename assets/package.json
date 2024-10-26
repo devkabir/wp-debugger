@@ -12,11 +12,11 @@
     "tailwindcss": "^3.4.14"
   },
   "scripts": {
-    "build:bar": "postcss ./temp/bar.css -o css/bar.css --watch",
-    "watch:bar": "tailwindcss -c tailwind.bar.config.js -o ./temp/bar.css --watch",
+    "build:bar": "postcss css/bar.css -o css/bar.css",
+    "watch:bar": "tailwindcss -c tailwind.bar.config.js -o css/bar.css --watch",
     "dev:bar": "concurrently \"npm run watch:bar\" \"npm run build:bar\"",
-    "build:page": "postcss ./temp/page.css -o css/page.css --watch",
-    "watch:page": "tailwindcss -c tailwind.page.config.js -o ./temp/page.css --watch",
+    "build:page": "postcss temp/page.css -o css/page.css --watch",
+    "watch:page": "tailwindcss -c tailwind.page.config.js -o css/page.css --watch",
     "dev:page": "concurrently \"npm run watch:page\" \"npm run build:page\"",
     "dev": "concurrently \"npm run dev:bar\" \"npm run dev:page\""
   }

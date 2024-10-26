@@ -38,7 +38,6 @@ class Plugin {
 		$skip_error_page = sanitize_text_field( wp_unslash( $_GET['skip_error_page'] ?? '' ) );
 		if ( empty( $skip_error_page ) ) {
 			new ErrorPage();
-			// DebugBar::get_instance();
 			new DebugBar();
 		}
 	}
@@ -81,7 +80,7 @@ class Plugin {
 			'/hosting' =>
 				array(
 					'is_enabled' => false,
-					'waf'        => array(
+					'waf' => array(
 						'is_active' => false,
 					),
 				),
@@ -90,20 +89,20 @@ class Plugin {
 		foreach ( $mock_urls as $mock_url => $mock_response ) {
 			if ( strpos( $url, $mock_url ) !== false ) {
 				if ( isset( $args['method'] ) && strtoupper( $args['method'] ) === 'POST' && isset( $args['body'] ) ) {
-					$post_data     = wp_parse_args( $args['body'] );
+					$post_data = wp_parse_args( $args['body'] );
 					$transient_key = 'mock_post_data_' . md5( $url . $args['method'] );
 					set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
 				}
 
 				return json_encode(
 					array(
-						'body'          => $mock_response,
-						'response'      => array(
-							'code'    => 200,
+						'body' => $mock_response,
+						'response' => array(
+							'code' => 200,
 							'message' => 'OK',
 						),
-						'headers'       => array(),
-						'cookies'       => array(),
+						'headers' => array(),
+						'cookies' => array(),
 						'http_response' => null,
 					)
 				);
