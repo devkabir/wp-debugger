@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Logs a message to a specified directory.
  *
@@ -24,12 +25,21 @@ function init_debugger() {
 }
 
 /**
- * Dump a variable's information for debugging purposes.
+ * Outputs a formatted dump of a variable for debugging purposes.
  *
+ * @param mixed $variable The variable to dump.
  * @return void
  */
-function dump() {
-	\DevKabir\WPDebugger\ErrorPage::dump( ...func_get_args() );
+function dump( $variable ) {
+	$stylesheet = DevKabir\WPDebugger\Template::get_asset( 'prism.css' );
+	$script = DevKabir\WPDebugger\Template::get_asset( 'prism.js' );
+	if ( is_object( $variable ) ) {
+		$variable = var_export( $variable, true );
+	}
+	$compiledData = DevKabir\WPDebugger\Template::compile( [ '{{content}}' => $variable ], DevKabir\WPDebugger\Template::get_part( 'dump' ) );
+	echo '<link rel="stylesheet" href="' . $stylesheet . '">';
+	echo '<script src="' . $script . '"></script>';
+	echo '<div style="z-index: 9999; position: relative; width: fit-content;float: right; margin-left: 1em; margin-right: 1em">' . $compiledData . '</div>';
 }
 
 /**
@@ -37,8 +47,8 @@ function dump() {
  *
  * @return void
  */
-function dd() {
-	dump( ...func_get_args() );
+function dd( $data ) {
+	dump( $data );
 	die;
 }
 

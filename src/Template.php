@@ -27,26 +27,24 @@ class Template {
 		return file_get_contents( $template );
 	}
 
-
-
 	/**
 	 * Replaces placeholders in the template with provided data.
 	 *
-	 * @param array  $data
+	 * @param mixed  $data
 	 * @param string $template
 	 *
 	 * @return string
 	 */
-	public static function compile( array $data, string $template ): string {
+	public static function compile( $data, string $template ): string {
 		return str_replace( array_keys( $data ), array_values( $data ), $template );
 	}
 
 	public static function get_layout(): string {
 		return self::compile(
 			array(
-				'{{tailwind_css_url}}' => self::get_asset( 'page.css' ),
-				'{{prism_css_url}}'    => self::get_asset( 'prism.css' ),
-				'{{prism_js_url}}'     => self::get_asset( 'prism.js' ),
+				'{{css_url}}' => self::get_asset( 'page.css' ),
+				'{{prism_css_url}}' => self::get_asset( 'prism.css' ),
+				'{{prism_js_url}}' => self::get_asset( 'prism.js' ),
 			),
 			self::get_part( 'layout' )
 		);
