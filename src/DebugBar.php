@@ -27,7 +27,7 @@ class DebugBar {
 	 * Initializes the debug bar with timing and memory usage.
 	 */
 	public function __construct() {
-		$this->start_time = microtime( true );
+		$this->start_time   = microtime( true );
 		$this->start_memory = memory_get_usage();
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_footer', array( $this, 'render' ) );
@@ -57,7 +57,7 @@ class DebugBar {
 	 */
 	public function add_message( string $message, ?string $icon = null ): void {
 		$this->messages[] = $icon ? array(
-			'icon' => $icon,
+			'icon'    => $icon,
 			'message' => $message,
 		) : array( 'message' => $message );
 	}
@@ -70,7 +70,7 @@ class DebugBar {
 		foreach ( $this->messages as $message ) {
 			$output .= Template::compile(
 				array(
-					'{{item}}' => $message['message'],
+					'{{item}}'      => $message['message'],
 					'{{icon_path}}' => $message['icon'] ? Template::get_asset( 'icons/' . $message['icon'] . '.png' ) : '',
 				),
 				$message['icon'] ? Template::get_part( 'with-icon', 'bar' ) : Template::get_part( 'item', 'bar' )
@@ -79,7 +79,7 @@ class DebugBar {
 
 		echo Template::compile(
 			array(
-				'{{bar}}' => $output,
+				'{{bar}}'  => $output,
 				'{{body}}' => $this->render_table( $this->get_contents() ),
 			),
 			Template::get_part( 'bar', 'bar' )
@@ -93,7 +93,7 @@ class DebugBar {
 	 * @return string
 	 */
 	private function format_memory( int $size ): string {
-		$units = array( 'B', 'KB', 'MB', 'GB', 'TB' );
+		$units     = array( 'B', 'KB', 'MB', 'GB', 'TB' );
 		$unitIndex = 0;
 
 		while ( $size >= 1024 && $unitIndex < count( $units ) - 1 ) {
@@ -125,20 +125,26 @@ class DebugBar {
 	private function get_contents(): array {
 		$contents = array(
 			'requests' => array(
-				'get' => $_GET,
-				'post' => $_POST,
-				'files' => $_FILES,
+				'get'     => $_GET,
+				'post'    => $_POST,
+				'files'   => $_FILES,
 				'session' => $_SESSION,
-				'cookie' => $_COOKIE
+				'cookie'  => $_COOKIE,
 			),
 		);
+		/**
+		 * Filter to push data into the debug bar contents.
+		 *
+		 * @param array $contents Collection of debug data.
+		 */
 		$filter_data = apply_filters( 'wp_debugger_contents', $contents );
+
 		return array_merge( $contents, $filter_data );
 	}
 
 	private function render_table( array $contents ) {
 		$table = Template::get_part( 'table', 'bar' );
-		$row = Template::get_part( 'table_row', 'bar' );
+		$row   = Template::get_part( 'table_row', 'bar' );
 
 		$rows = '';
 
@@ -148,7 +154,7 @@ class DebugBar {
 			}
 			$rows .= Template::compile(
 				array(
-					'{{key}}' => $key,
+					'{{key}}'   => $key,
 					'{{value}}' => is_array( $value ) && ! empty( $value ) ? $this->render_table( $value ) : $value,
 				),
 				$row

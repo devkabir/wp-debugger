@@ -48,14 +48,3 @@ function dd( $data ) {
 	dump( $data );
 	die;
 }
-
-/**
- * Adds a message to the debug bar.
- *
- * @param mixed $message The message to add to the debug bar.
- *
- * @return void
- */
-function push_to_bar( $message ) {
-	DevKabir\WPDebugger\DebugBar::get_instance()->add_message( $message );
-}
