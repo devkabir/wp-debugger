@@ -1,10 +1,23 @@
 {
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "postcss": "^8.4.47",
+    "postcss-cli": "^11.0.0",
+    "postcss-prefix-selector": "^2.1.0",
     "tailwindcss": "^3.4.14"
   },
   "scripts": {
-    "watch:bar": "tailwindcss -c tailwind.bar.config.js -o ./bar.css --watch",
-    "watch:page": "tailwindcss -c tailwind.page.config.js -o ./page.css --watch",
-    "watch": "npm run watch:bar && npm run watch:page"
+    "build:bar": "postcss ./temp/bar.css -o css/bar.css --watch",
+    "watch:bar": "tailwindcss -c tailwind.bar.config.js -o ./temp/bar.css --watch",
+    "dev:bar": "concurrently \"npm run watch:bar\" \"npm run build:bar\"",
+    "build:page": "postcss ./temp/page.css -o css/page.css --watch",
+    "watch:page": "tailwindcss -c tailwind.page.config.js -o ./temp/page.css --watch",
+    "dev:page": "concurrently \"npm run watch:page\" \"npm run build:page\"",
+    "dev": "concurrently \"npm run dev:bar\" \"npm run dev:page\""
   }
 }

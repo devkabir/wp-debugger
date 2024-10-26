@@ -2,10 +2,14 @@
 module.exports = {
     content: ["./templates/bar/*.html"],
     theme: {
-        extend: {},
+        extend: {
+            'width': {
+                fill: '-webkit-fill-available',
+            }
+        },
     },
     plugins: [],
     corePlugins: {
-        preflight: false,
+        preflight: false,        
     },
 }

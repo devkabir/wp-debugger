@@ -1,20 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exception Caught</title>
-    <link href="{{css_url}}" rel="stylesheet">
-    <link href="{{prism_css_url}}" rel="stylesheet">
-</head>
-
-<body class="bg-gray-200 text-gray-800">
+<link href="{{css_url}}" rel="stylesheet" />
+<link href="{{prism_css_url}}" rel="stylesheet" />
+<section class="wp-debugger p-4">
+  <div class="bg-gray-200 text-gray-800 absolute z-50 w-full p-4">
     {{content}}
     <script src="{{prism_js_url}}"></script>
     <script>
-        Prism.highlightAll();
+      Prism.highlightAll();
     </script>
-</body>
-
-</html>
+  </div>
+</section>

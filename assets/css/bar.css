@@ -1,4 +1,4 @@
-*, ::before, ::after {
+.wp-debugger *, .wp-debugger ::before, .wp-debugger ::after {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -52,7 +52,7 @@
   --tw-contain-style:  
 }
 
-::backdrop {
+.wp-debugger ::backdrop {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -104,4 +104,122 @@
   --tw-contain-layout:  ;
   --tw-contain-paint:  ;
   --tw-contain-style:  
+}
+
+.wp-debugger .fixed {
+  position: fixed
+}
+
+.wp-debugger .bottom-0 {
+  bottom: 0px
+}
+
+.wp-debugger .left-0 {
+  left: 0px
+}
+
+.wp-debugger .z-\[999999\] {
+  z-index: 999999
+}
+
+.wp-debugger .mt-4 {
+  margin-top: 1rem
+}
+
+.wp-debugger .flex {
+  display: flex
+}
+
+.wp-debugger .h-4 {
+  height: 1rem
+}
+
+.wp-debugger .h-auto {
+  height: auto
+}
+
+.wp-debugger .w-4 {
+  width: 1rem
+}
+
+.wp-debugger .w-fill {
+  width: -webkit-fill-available
+}
+
+.wp-debugger .cursor-pointer {
+  cursor: pointer
+}
+
+.wp-debugger .items-center {
+  align-items: center
+}
+
+.wp-debugger .justify-end {
+  justify-content: flex-end
+}
+
+.wp-debugger .justify-between {
+  justify-content: space-between
+}
+
+.wp-debugger .gap-2 {
+  gap: 0.5rem
+}
+
+.wp-debugger .text-ellipsis {
+  text-overflow: ellipsis
+}
+
+.wp-debugger .rounded {
+  border-radius: 0.25rem
+}
+
+.wp-debugger .rounded-md {
+  border-radius: 0.375rem
+}
+
+.wp-debugger .border {
+  border-width: 1px
+}
+
+.wp-debugger .border-gray-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity))
+}
+
+.wp-debugger .bg-slate-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(248 250 252 / var(--tw-bg-opacity))
+}
+
+.wp-debugger .bg-white {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity))
+}
+
+.wp-debugger .p-1 {
+  padding: 0.25rem
+}
+
+.wp-debugger .p-4 {
+  padding: 1rem
+}
+
+.wp-debugger .px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem
+}
+
+.wp-debugger .py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem
+}
+
+.wp-debugger .align-baseline {
+  vertical-align: baseline
+}
+
+.wp-debugger .hover\:bg-gray-100:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity))
 }

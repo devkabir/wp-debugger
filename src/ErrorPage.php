@@ -31,12 +31,15 @@ class ErrorPage {
 	 * @return void
 	 */
 	public function jsonHandler( Throwable $throwable ): void {
-		echo json_encode( array(
+		echo json_encode(
+			array(
 				'message' => $throwable->getMessage(),
 				'file'    => $throwable->getFile(),
 				'line'    => $throwable->getLine(),
 				'trace'   => array_column( $throwable->getTrace(), 'file', 'function' ),
-			), JSON_PRETTY_PRINT );
+			),
+			JSON_PRETTY_PRINT
+		);
 	}
 
 	/**
@@ -130,7 +133,7 @@ class ErrorPage {
 				'{{value}}' => $this->dump( $value ),
 			);
 
-			++ $index;
+			++$index;
 			$output .= Template::compile( $data, $template );
 		}
 
@@ -138,6 +141,7 @@ class ErrorPage {
 	}
 
 	public function handle_shutdown(): void {
-		echo __METHOD__;
+		echo $this->dump( error_get_last() );
+		die;
 	}
 }

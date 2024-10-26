@@ -5,8 +5,14 @@ namespace DevKabir\WPDebugger;
 use Throwable;
 
 class Template {
-	public static function get_asset( $file ) {
-		return plugins_url( 'assets/' . $file, FILE );
+	public static function get_asset( string $file ): string {
+		$path = plugin_dir_path( FILE ) . 'assets/' . $file;
+		if ( ! file_exists( $path ) ) {
+			throw new \Exception( "Asset {$file} not found" );
+		}
+
+		$url = plugins_url( 'assets/' . $file, FILE );
+		return $url;
 	}
 
 
@@ -21,7 +27,7 @@ class Template {
 		$template = plugin_dir_path( FILE ) . 'assets/templates/' . $folder . '/' . $name . '.html';
 
 		if ( ! file_exists( $template ) ) {
-			die( "Template: $template not found." );
+			throw new \Exception( "Template {$name} not found" );
 		}
 
 		return file_get_contents( $template );
@@ -42,9 +48,9 @@ class Template {
 	public static function get_layout(): string {
 		return self::compile(
 			array(
-				'{{css_url}}'       => self::get_asset( 'page.css' ),
-				'{{prism_css_url}}' => self::get_asset( 'prism.css' ),
-				'{{prism_js_url}}'  => self::get_asset( 'prism.js' ),
+				'{{css_url}}'       => self::get_asset( 'css/page.css' ),
+				'{{prism_css_url}}' => self::get_asset( 'css/prism.css' ),
+				'{{prism_js_url}}'  => self::get_asset( 'js/prism.js' ),
 			),
 			self::get_part( 'layout' )
 		);

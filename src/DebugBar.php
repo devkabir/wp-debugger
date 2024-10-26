@@ -70,7 +70,7 @@ class DebugBar {
 		$execution_time = $this->format_time( $end_time - $this->start_time );
 		$memory_usage   = $this->format_memory( $end_memory - $this->start_memory );
 		$this->add_message( $execution_time, 'timer' );
-		$this->add_message( $memory_usage );
+		$this->add_message( $memory_usage, 'chip' );
 	}
 
 
@@ -82,7 +82,7 @@ class DebugBar {
 	 * interface.
 	 */
 	public function scripts() {
-		wp_enqueue_style( 'debug-bar', Template::get_asset( 'debugbar.css' ), array(), time() );
+		wp_enqueue_style( 'debug-bar', Template::get_asset( 'css/bar.css' ), array(), time() );
 	}
 
 	/**
@@ -90,9 +90,12 @@ class DebugBar {
 	 */
 	public function add_message( $message, $icon = null ) {
 		if ( ! empty( $icon ) ) {
-			$this->messages[ $icon ] = $message;
+			$this->messages[] = array(
+				'icon'    => $icon,
+				'message' => $message,
+			);
 		} else {
-			$this->messages[] = $message;
+			$this->messages[] = array( 'message' => $message );
 		}
 	}
 
@@ -104,23 +107,29 @@ class DebugBar {
 	 * added to the debug bar using the `add_message` method.
 	 */
 	public function render() {
-		$template  = Template::get_part( 'bar' );
-		$part      = Template::get_part( 'bar-item' );
-		$icon_part = Template::get_part( 'bar-item-with-icon' );
+		$template  = Template::get_part( 'bar', 'bar' );
+		$part      = Template::get_part( 'item', 'bar' );
+		$icon_part = Template::get_part( 'with-icon', 'bar' );
 		$output    = '';
 		if ( ! empty( $this->messages ) ) {
-			foreach ( $this->messages as $icon => $message ) {
-				$icon_path = Template::get_asset( 'icons/' . $icon . '.png' );
-				$output   .= Template::compile(
+			foreach ( $this->messages as $message ) {
+
+				$output .= Template::compile(
 					array(
-						'{{item}}'      => $message,
-						'{{icon_path}}' => $icon_path,
+						'{{item}}'      => $message['message'],
+						'{{icon_path}}' => isset( $message['icon'] ) ? Template::get_asset( 'icons/' . $message['icon'] . '.png' ) : '',
 						'{{icon}}'      => $icon,
 					),
-					file_exists( $icon_path ) ? $icon_part : $part
+					isset( $message['icon'] ) ? $icon_part : $part
 				);
 			}
-			echo Template::compile( array( '{{content}}' => $output ), $template );
+			echo Template::compile(
+				array(
+					'{{bar}}'  => $output,
+					'{{body}}' => $this->get_contents(),
+				),
+				$template
+			);
 		}
 	}
 
@@ -159,5 +168,9 @@ class DebugBar {
 		} else {
 			return round( $time, 2 ) . ' s'; // Seconds
 		}
+	}
+
+	private function get_contents() {
+		return __METHOD__;
 	}
 }

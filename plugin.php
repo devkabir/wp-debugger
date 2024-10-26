@@ -41,4 +41,3 @@ require_once __DIR__ . '/vendor/autoload.php';
 |--------------------------------------------------------------------------
 */
 DevKabir\WPDebugger\Plugin::get_instance();
-init_debugger();
