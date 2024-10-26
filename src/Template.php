@@ -44,7 +44,7 @@ class Template {
 	public static function get_layout(): string {
 		return self::compile(
 			array(
-				'{{tailwind_css_url}}' => self::get_asset( 'tailwind.css' ),
+				'{{tailwind_css_url}}' => self::get_asset( 'page.css' ),
 				'{{prism_css_url}}'    => self::get_asset( 'prism.css' ),
 				'{{prism_js_url}}'     => self::get_asset( 'prism.js' ),
 			),
