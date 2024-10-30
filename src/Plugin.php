@@ -25,21 +25,65 @@ class Plugin {
 	 * the error page.
 	 */
 	public function __construct() {
+		define( 'SAVEQUERIES', true );
 		add_action(
 			'init',
 			function (): void {
 				wp_deregister_script( 'heartbeat' );
 			}
 		);
+		add_action( 'admin_init', array( $this, 'render_settings' ) );
 		// Check if the plugin should be enabled based on the constant in wp-config.php.
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
 		}
 		$skip_error_page = sanitize_text_field( wp_unslash( $_GET['skip_error_page'] ?? '' ) );
 		if ( empty( $skip_error_page ) ) {
-			new ErrorPage();
-			new DebugBar();
+			if ( enable_debugger() ) {
+				new ErrorPage();
+			}
+			if ( show_debugbar() ) {
+				new DebugBar();
+			}
 		}
+	}
+
+	/**
+	 * Registers settings and fields for the debug bar and debugger options in the WordPress general settings page.
+	 *
+	 * This function adds two settings fields to the general settings page:
+	 * - 'Show Debug Bar': A checkbox to toggle the display of the debug bar.
+	 * - 'Enable Debugger': A checkbox to enable or disable the debugger.
+	 *
+	 * @return void
+	 */
+	public function render_settings(): void {
+		register_setting( 'general', 'show_debugbar' );
+		register_setting( 'general', 'enable_debugger' );
+
+		add_settings_field(
+			'enable_debugger',
+			'Enable Debugger',
+			'render_settings_fields',
+			'general',
+			'default',
+			array(
+				'id'    => 'enable_debugger',
+				'label' => 'Enable Debugger',
+			)
+		);
+
+		add_settings_field(
+			'show_debugbar',
+			'Show Debug Bar',
+			'render_settings_fields',
+			'general',
+			'default',
+			array(
+				'id'    => 'show_debugbar',
+				'label' => 'Show Debug Bar',
+			)
+		);
 	}
 
 	/**
@@ -80,7 +124,7 @@ class Plugin {
 			'/hosting' =>
 				array(
 					'is_enabled' => false,
-					'waf' => array(
+					'waf'        => array(
 						'is_active' => false,
 					),
 				),
@@ -89,20 +133,20 @@ class Plugin {
 		foreach ( $mock_urls as $mock_url => $mock_response ) {
 			if ( strpos( $url, $mock_url ) !== false ) {
 				if ( isset( $args['method'] ) && strtoupper( $args['method'] ) === 'POST' && isset( $args['body'] ) ) {
-					$post_data = wp_parse_args( $args['body'] );
+					$post_data     = wp_parse_args( $args['body'] );
 					$transient_key = 'mock_post_data_' . md5( $url . $args['method'] );
 					set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
 				}
 
 				return json_encode(
 					array(
-						'body' => $mock_response,
-						'response' => array(
-							'code' => 200,
+						'body'          => $mock_response,
+						'response'      => array(
+							'code'    => 200,
 							'message' => 'OK',
 						),
-						'headers' => array(),
-						'cookies' => array(),
+						'headers'       => array(),
+						'cookies'       => array(),
 						'http_response' => null,
 					)
 				);

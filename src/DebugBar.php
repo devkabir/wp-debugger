@@ -23,15 +23,77 @@ class DebugBar {
 	 * @var int
 	 */
 	private $start_memory;
+
+	/**
+	 * Array of contents to display in the debug bar.
+	 *
+	 * @var array
+	 */
+	private $contents;
+
 	/**
 	 * Initializes the debug bar with timing and memory usage.
 	 */
 	public function __construct() {
 		$this->start_time   = microtime( true );
 		$this->start_memory = memory_get_usage();
+		$this->contents     = array(
+			'Requests' => array(
+				'Get'     => $_GET,
+				'Post'    => $_POST,
+				'Files'   => $_FILES,
+				'Session' => $_SESSION ?? array(),
+				'Cookie'  => $_COOKIE,
+			),
+		);
+		/**
+		 * Fires once a single activated plugin has loaded.
+		 *
+		 * @param string $plugin Full path to the plugin's main file.
+		 */
+		add_action(
+			'plugin_loaded',
+			function ( string $plugin ): void {
+				$plugin                              = basename( dirname( $plugin ) );
+				$this->contents['Plugin'][ $plugin ] = $this->get_time();
+			}
+		);
+		/**
+		 * Fires just before PHP shuts down execution.
+		 */
+		add_action(
+			'shutdown',
+			function (): void {
+				global $wpdb;
+				foreach ( $wpdb->queries as $query ) {
+					$this->contents['Queries'][] = $query;
+				}
+			}
+		);
+
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_footer', array( $this, 'render' ) );
 		add_action( 'wp_loaded', array( $this, 'log_execution' ) );
+	}
+
+	/**
+	 * Parses an array of queries and adds them to the debug bar.
+	 *
+	 * @param array|null $queries An array of queries, as returned by wpdb::queries.
+	 */
+	public function parse_query( array $queries ) {
+		foreach ( $queries as $query ) {
+			$this->contents['Queries'][] = $query;
+		}
+	}
+
+	/**
+	 * Gets the time elapsed since the start of the debug bar.
+	 *
+	 * @return string A human-readable string representing the time elapsed.
+	 */
+	public function get_time() {
+		return $this->format_time( microtime( true ) - $this->start_time );
 	}
 
 	/**
@@ -123,23 +185,14 @@ class DebugBar {
 	 * @return array
 	 */
 	private function get_contents(): array {
-		$contents = array(
-			'requests' => array(
-				'get'     => $_GET,
-				'post'    => $_POST,
-				'files'   => $_FILES,
-				'session' => $_SESSION,
-				'cookie'  => $_COOKIE,
-			),
-		);
 		/**
 		 * Filter to push data into the debug bar contents.
 		 *
 		 * @param array $contents Collection of debug data.
 		 */
-		$filter_data = apply_filters( 'wp_debugger_contents', $contents );
+		$filter_data = apply_filters( 'wp_debugger_contents', $this->contents );
 
-		return array_merge( $contents, $filter_data );
+		return array_merge( $this->contents, $filter_data );
 	}
 
 	private function render_table( array $contents ) {

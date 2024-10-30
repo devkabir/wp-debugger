@@ -9,15 +9,16 @@ class ErrorPage {
 		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
 		set_exception_handler( array( $this, 'handle' ) );
 		ini_set( 'display_errors', 'off' );
-		error_reporting( - 1 );
+		error_reporting( -1 );
 	}
 
 	public function handle( Throwable $throwable ): void {
 		if ( $this->isJsonRequest() ) {
 			$this->jsonHandler( $throwable );
+		} else {
+			$this->render( $throwable );
 		}
 
-		$this->render( $throwable );
 		die;
 	}
 
@@ -33,10 +34,11 @@ class ErrorPage {
 	public function jsonHandler( Throwable $throwable ): void {
 		echo json_encode(
 			array(
-				'message' => $throwable->getMessage(),
-				'file'    => $throwable->getFile(),
-				'line'    => $throwable->getLine(),
-				'trace'   => array_column( $throwable->getTrace(), 'file', 'function' ),
+				'message'  => $throwable->getMessage(),
+				'file'     => $throwable->getFile(),
+				'line'     => $throwable->getLine(),
+				'trace'    => $throwable->getTrace(),
+				'previous' => $throwable->getPrevious(),
 			),
 			JSON_PRETTY_PRINT
 		);

@@ -14,10 +14,9 @@
   "scripts": {
     "build:bar": "postcss css/bar.css -o css/bar.css",
     "watch:bar": "tailwindcss -c tailwind.bar.config.js -o css/bar.css --watch",
-    "dev:bar": "concurrently \"npm run watch:bar\" \"npm run build:bar\"",
-    "build:page": "postcss temp/page.css -o css/page.css --watch",
+    "build:page": "postcss css/page.css -o css/page.css",
     "watch:page": "tailwindcss -c tailwind.page.config.js -o css/page.css --watch",
-    "dev:page": "concurrently \"npm run watch:page\" \"npm run build:page\"",
-    "dev": "concurrently \"npm run dev:bar\" \"npm run dev:page\""
+    "build": "npm run build:bar && npm run build:page",
+    "watch": "concurrently \"npm run watch:bar\" \"npm run watch:page\""
   }
 }

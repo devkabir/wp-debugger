@@ -31,20 +31,54 @@ function init_debugger() {
  * @return void
  */
 function dump( $variable ) {
-	$stylesheet = DevKabir\WPDebugger\Template::get_asset( 'prism.css' );
-	$script = DevKabir\WPDebugger\Template::get_asset( 'prism.js' );
-	$compiledData = DevKabir\WPDebugger\Template::compile( [ '{{content}}' => var_export( $variable, true ) ], DevKabir\WPDebugger\Template::get_part( 'dump' ) );
-	echo '<link rel="stylesheet" href="' . $stylesheet . '">';
-	echo '<script src="' . $script . '"></script>';
-	echo '<div style="z-index: 9999; position: relative; width: 450px;float: right; margin-left: 1em; margin-right: 1em">' . $compiledData . '</div>';
+	$compiled_data = DevKabir\WPDebugger\Template::compile( array( '{{content}}' => var_export( $variable, true ) ), DevKabir\WPDebugger\Template::get_part( 'dump' ) );
+	echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
 }
 
 /**
  * Dump a variable and stop execution.
+ *
+ * @param mixed $data The variable to dump.
  *
  * @return void
  */
 function dd( $data ) {
 	dump( $data );
 	die;
+}
+
+/**
+ * Renders a checkbox field in the WordPress settings page.
+ *
+ * @param array $args { .
+ *     @var string $id     The ID of the option to be saved in the database.
+ *     @var string $label   The label for the checkbox.
+ *
+ *     @see add_settings_field()
+ * }
+ *
+ * @return void
+ */
+function render_settings_fields( $args ) {
+	$option = get_option( $args['id'] );
+	echo '<input type="checkbox" id="' . $args['id'] . '" name="' . $args['id'] . '" value="1"' . checked( 1, $option, false ) . ' />';
+	echo '<label for="' . $args['id'] . '"> ' . $args['label'] . '</label>';
+}
+
+/**
+ * Retrieves the value of the `show_debugbar` option from the database.
+ *
+ * @return bool Whether the debug bar should be shown.
+ */
+function show_debugbar() {
+	return (bool) get_option( 'show_debugbar', false );
+}
+
+/**
+ * Retrieves the value of the `enable_debugger` option from the database.
+ *
+ * @return bool Whether the debugger should be enabled.
+ */
+function enable_debugger() {
+	return (bool) get_option( 'enable_debugger', false );
 }

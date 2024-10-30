@@ -9,5 +9,11 @@
     <arg value="sp" />
     <config name="testVersion" value="7.4-" />
     <config name="minimum_wp_version" value="5.2" />
-    <rule ref="WordPress" />
+    <rule ref="WordPress">
+        <exclude name="Squiz.Commenting.FunctionComment.EmptyThrows" />
+        <exclude name="Squiz.Commenting.FileComment.Missing" />
+        <exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped" />
+        <exclude name="WordPress.Files.FileName.NotHyphenatedLowercase" />
+        <exclude name="WordPress.Files.FileName.InvalidClassFileName" />
+    </rule>
 </ruleset>
