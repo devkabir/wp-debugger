@@ -113,14 +113,12 @@ class ErrorPage {
 	 */
 	private function compile_globals(): string {
 		$superglobals = array(
-			'$_GET'     => $_GET,
-			'$_POST'    => $_POST,
+			'$_REQUEST' => $_REQUEST,
 			'$_SERVER'  => $_SERVER,
 			'$_FILES'   => $_FILES,
 			'$_COOKIE'  => $_COOKIE,
 			'$_SESSION' => $_SESSION ?? array(),
-			'$_ENV'     => $_ENV,
-			'Headers'   => headers_list(),
+			'headers'   => headers_list(),
 		);
 
 		$template = Template::get_part( 'variable' );
