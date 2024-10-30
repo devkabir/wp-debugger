@@ -120,6 +120,7 @@ class ErrorPage {
 			'$_COOKIE'  => $_COOKIE,
 			'$_SESSION' => $_SESSION ?? array(),
 			'$_ENV'     => $_ENV,
+			'Headers'   => headers_list(),
 		);
 
 		$template = Template::get_part( 'variable' );
