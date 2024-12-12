@@ -7,27 +7,33 @@
  */
 
 // Exit if accessed directly.
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /**
  * Autoloader function for classes in the `src` directory.
  *
- * @param string $class_name The fully qualified class name.
+ * @param string $class The fully qualified class name.
  */
 spl_autoload_register(
-	static function ( $class_name ) {
-		// Define the base directory for the namespace prefix.
-		$base_dir = __DIR__ . '/src/';
+	static function ($class) {
+		// Base namespace for the plugin.
+		$namespace = 'DevKabir\\WPDebugger\\';
 
-		// Replace namespace separators with directory separators.
-		$relative_class = str_replace( '\\', DIRECTORY_SEPARATOR, $class_name );
+		// Ensure the class belongs to this namespace.
+		if (strpos($class, $namespace) === 0) {
+			// Remove the base namespace from the class.
+			$relative_class = str_replace($namespace, '', $class);
 
-		// Construct the full file path.
-		$file = $base_dir . $relative_class . '.php';
+			// Replace namespace separators with directory separators.
+			$relative_class = str_replace('\\', DIRECTORY_SEPARATOR, $relative_class);
 
-		// If the file exists, require it.
-		if ( file_exists( $file ) ) {
-			require_once $file;
+			// Build the full file path.
+			$file = __DIR__ . '/src/' . $relative_class . '.php';
+
+			// Include the file if it exists.
+			if (file_exists($file)) {
+				require_once $file;
+			}
 		}
 	}
 );
