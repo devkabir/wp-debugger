@@ -25,7 +25,9 @@ class Plugin {
 	 * the error page.
 	 */
 	public function __construct() {
-		define( 'SAVEQUERIES', true );
+		if ( ! defined( 'SAVEQUERIES' ) ) {
+			define( 'SAVEQUERIES', true );
+		}
 		add_action(
 			'init',
 			function (): void {
