@@ -15,25 +15,25 @@ defined( 'ABSPATH' ) || exit;
  * @param string $class The fully qualified class name.
  */
 spl_autoload_register(
-    static function ( $class ) {
-        // Base namespace for the plugin.
-        $namespace = 'DevKabir\\WPDebugger\\';
+	static function ( $class_name ) {
+		// Base namespace for the plugin.
+		$namespace = 'DevKabir\\WPDebugger\\';
 
-        // Ensure the class belongs to this namespace.
-        if ( strpos( $class, $namespace ) === 0 ) {
-            // Remove the base namespace from the class.
-            // Replace namespace separators with directory separators.
-            $relative_class = str_replace( array( $namespace, '\\' ), array( '', DIRECTORY_SEPARATOR ), $class );
+		// Ensure the class belongs to this namespace.
+		if ( strpos( $class_name, $namespace ) === 0 ) {
+			// Remove the base namespace from the class.
+			// Replace namespace separators with directory separators.
+			$relative_class = str_replace( array( $namespace, '\\' ), array( '', DIRECTORY_SEPARATOR ), $class_name );
 
-            // Build the full file path.
-            $file = __DIR__ . '/src/' . $relative_class . '.php';
+			// Build the full file path.
+			$file = __DIR__ . '/src/' . $relative_class . '.php';
 
-            // Include the file if it exists.
-            if ( file_exists( $file ) ) {
-                require_once $file;
-            }
-        }
-    }
+			// Include the file if it exists.
+			if ( file_exists( $file ) ) {
+				require_once $file;
+			}
+		}
+	}
 );
 
 require_once __DIR__ . '/functions.php';
