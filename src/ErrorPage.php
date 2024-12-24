@@ -16,9 +16,29 @@ class ErrorPage {
 	 */
 	public function __construct() {
 		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
+		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore
 		set_exception_handler( array( $this, 'handle' ) );
-		error_reporting( -1 );
+		error_reporting( -1 ); // phpcs:ignore
 	}
+
+	/**
+	 * Converts PHP errors to Exceptions
+	 *
+	 * This function is the custom error handler for WordPress. It converts PHP
+	 * errors into Exceptions, which can then be caught and handled by the
+	 * `handle` method.
+	 *
+	 * @param int    $errno   The level of the error raised, as an integer.
+	 * @param string $errstr  The error message, as a string.
+	 * @param string $errfile The filename that the error was raised in, as a string.
+	 * @param int    $errline The line number the error was raised at, as an integer.
+	 *
+	 * @throw \ErrorException The converted error as an Exception
+	 */
+	public function errors( $errno, $errstr, $errfile, $errline ): bool {
+		throw new \ErrorException( $errstr, 0, $errno, $errfile, $errline );
+	}
+
 	/**
 	 * Handles thrown exceptions and errors
 	 *
@@ -100,7 +120,7 @@ class ErrorPage {
 			$file_path    = $frame['file'];
 			$line         = $frame['line'];
 			$editor       = "vscode://file/$file_path:$line";
-			$file_content = wp_remote_get( $file_path ) ?? '';
+			$file_content = file_get_contents( $file_path ) ?? '';
 			$lines        = explode( "\n", $file_content );
 			$start_line   = max( 0, $frame['line'] - 5 );
 			$end_line     = min( count( $lines ), $frame['line'] + 5 );

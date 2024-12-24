@@ -45,7 +45,7 @@ function dump( $variable ) {
  * @return void
  * @throws Exception
  */
-function dd( $data ) {
+function dd( ...$data ) {
 	dump( $data );
 	die;
 }
