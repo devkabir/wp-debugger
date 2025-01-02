@@ -7,7 +7,7 @@
  */
 
 // Exit if accessed directly.
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /**
  * Autoloader function for classes in the `src` directory.
@@ -15,23 +15,24 @@ defined( 'ABSPATH' ) || exit;
  * @param string $class The fully qualified class name.
  */
 spl_autoload_register(
-	static function ( $class_name ) {
+	static function ($class_name) {
 		// Base namespace for the plugin.
 		$namespace = 'DevKabir\\WPDebugger\\';
 
 		// Ensure the class belongs to this namespace.
-		if ( strpos( $class_name, $namespace ) === 0 ) {
-			// Remove the base namespace from the class.
+		if (strpos($class_name, $namespace) === 0) {
 			// Replace namespace separators with directory separators.
-			$relative_class = str_replace( array( $namespace, '\\' ), array( '', DIRECTORY_SEPARATOR ), $class_name );
+			$relative_class = str_replace(array($namespace, '\\'), array('', DIRECTORY_SEPARATOR), $class_name);
 
 			// Build the full file path.
-			$file = __DIR__ . '/src/' . $relative_class . '.php';
+			$file = __DIR__ . '/src/class-' . strtolower(str_replace('_', '-', $relative_class)) . '.php';
 
 			// Include the file if it exists.
-			if ( file_exists( $file ) ) {
-				require_once $file;
+			if (!file_exists($file)) {
+				echo $file;
+				exit;
 			}
+			require_once $file;
 		}
 	}
 );

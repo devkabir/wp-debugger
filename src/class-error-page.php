@@ -9,7 +9,7 @@ use Throwable;
  *
  * @package DevKabir\WPDebugger
  */
-class ErrorPage {
+class Error_Page {
 
 	/**
 	 * Constructor - Sets up error handling hooks and configuration

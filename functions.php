@@ -4,14 +4,15 @@
  * Logs a message to a specified directory.
  *
  * @param mixed  $message The message to be logged.
- * @param bool   $trace Whether to log the backtrace.
- * @param string $dir The directory where the log file will be written.
  *
  * @return void
  * @throws \Exception
  */
-function write_log( $message, bool $trace = false, string $dir = WP_CONTENT_DIR ) {
-	DevKabir\WPDebugger\Plugin::get_instance()->log( $message, $trace, $dir );
+function write_log(...$messages)
+{
+	foreach ($messages as $message) {
+		DevKabir\WPDebugger\Plugin::get_instance()->log($message);
+	}
 }
 
 /**
@@ -20,7 +21,8 @@ function write_log( $message, bool $trace = false, string $dir = WP_CONTENT_DIR 
  * @return void
  * @throws Exception
  */
-function init_debugger() {
+function init_debugger()
+{
 	DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
 }
 
@@ -32,9 +34,10 @@ function init_debugger() {
  * @return void
  * @throws Exception
  */
-function dump( $variable ) {
-	$compiled_data = DevKabir\WPDebugger\Template::compile( array( '{{content}}' => var_export( $variable, true ) ), DevKabir\WPDebugger\Template::get_part( 'dump' ) );
-	echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
+function dump($variable)
+{
+	$compiled_data = DevKabir\WPDebugger\Template::compile(array('{{content}}' => var_export($variable, true)), DevKabir\WPDebugger\Template::get_part('dump'));
+	echo DevKabir\WPDebugger\Template::compile(array('{{content}}' => $compiled_data), DevKabir\WPDebugger\Template::get_layout());
 }
 
 /**
@@ -45,8 +48,9 @@ function dump( $variable ) {
  * @return void
  * @throws Exception
  */
-function dd( ...$data ) {
-	dump( $data );
+function dd(...$data)
+{
+	dump(func_get_args());
 	die;
 }
 
@@ -57,9 +61,10 @@ function dd( ...$data ) {
  *
  * @var string $id The ID of the option to be saved in the database.
  */
-function render_settings_fields( array $args ) {
-	$option = get_option( $args['id'] );
-	echo '<input type="checkbox" id="' . $args['id'] . '" name="' . $args['id'] . '" value="1"' . checked( 1, $option, false ) . ' />';
+function render_settings_fields(array $args)
+{
+	$option = get_option($args['id']);
+	echo '<input type="checkbox" id="' . $args['id'] . '" name="' . $args['id'] . '" value="1"' . checked(1, $option, false) . ' />';
 	echo '<label for="' . $args['id'] . '"> ' . $args['label'] . '</label>';
 }
 
@@ -68,6 +73,7 @@ function render_settings_fields( array $args ) {
  *
  * @return bool Whether the debug bar should be shown.
  */
-function show_debugbar(): bool {
-	return (bool) get_option( 'show_debugbar', false );
+function show_debugbar(): bool
+{
+	return (bool) get_option('show_debugbar', false);
 }

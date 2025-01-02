@@ -38,12 +38,12 @@ class Plugin {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
 		}
 
-		new ErrorPage();
+		new Error_Page();
 		if ( show_debugbar() ) {
 			if ( ! defined( 'SAVEQUERIES' ) ) {
 				define( 'SAVEQUERIES', true );
 			}
-			new DebugBar();
+			new Debug_Bar();
 		}
 	}
 

@@ -2,9 +2,6 @@
 
 namespace DevKabir\WPDebugger;
 
-use Exception;
-use Throwable;
-
 class Template {
     public static function get_asset( string $file ): string {
         $path = plugin_dir_path( FILE ) . 'assets/' . $file;

@@ -2,7 +2,7 @@
 
 namespace DevKabir\WPDebugger;
 
-class DebugBar {
+class Debug_Bar {
     /**
      * Array of messages to display in the debug bar.
      *
