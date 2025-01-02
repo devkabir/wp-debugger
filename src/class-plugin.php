@@ -189,7 +189,7 @@ class Plugin {
 	public function format_log_message( $message ): string {
 		if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
 			$message = wp_json_encode( $message, 128 );
-		} else {
+		} else if ( is_string( $message ) ) {
 			$decoded = json_decode( $message, true );
 			if ( JSON_ERROR_NONE === json_last_error() ) {
 				$message = wp_json_encode( $decoded, 128 );
