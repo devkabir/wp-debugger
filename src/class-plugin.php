@@ -155,28 +155,22 @@ class Plugin {
 		return new WP_Error( '404', 'Interceptor enabled by wp-logger plugin.' );
 	}
 
-	/**
-	 * Logs a message to a specified directory.
-	 *
-	 * @param mixed  $message The message to be logged.
-	 * @param bool   $trace Whether to log the backtrace.
-	 * @param string $dir The directory where the log file will be written.
-	 *
-	 * @return void
-	 * @throws Exception
-	 */
-	public function log( $message, bool $trace = false, string $dir = WP_CONTENT_DIR ): void {
-		$log_file = $dir . '/wp-debugger.log';
+    /**
+     * Logs a message to a specified directory.
+     *
+     * @param mixed $message The message to be logged.
+     *
+     * @return void
+     */
+	public function log( $message ): void {
+		$log_file = sprintf( "%s/wp-debugger-%s.log", WP_CONTENT_DIR, gmdate( 'Y-m-d' ) );
 
-		if ( file_exists( $log_file ) && filesize( $log_file ) > 1 * 1024 * 1024 ) {
+		if ( file_exists( $log_file ) && filesize( $log_file ) > 1024 * 1024 ) {
 			file_put_contents( $log_file, '' );
 		}
 
 		$message = $this->format_log_message( $message );
         error_log($message . PHP_EOL, 3, $log_file); // phpcs:ignore
-		if ( $trace ) {
-			$this->throw_exception();
-		}
 	}
 
 	/**

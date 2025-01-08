@@ -3,10 +3,9 @@
 /**
  * Logs a message to a specified directory.
  *
- * @param mixed $message The message to be logged.
+ * @param mixed ...$messages The messages to be logged.
  *
  * @return void
- * @throws \Exception
  */
 function write_log( ...$messages ) {
 	foreach ( $messages as $message ) {
@@ -15,23 +14,37 @@ function write_log( ...$messages ) {
 }
 
 /**
- * Log stack trace.
- * 
+ * Format stack trace.
+ *
  * @param array $trace The stack trace.
  *
- * @return void
+ * @return array The formatted trace.
  */
-function log_stack_trace( $trace ) {
+function format_stack_trace( array $trace ): array {
 	$formatted_trace = array();
 	foreach ( $trace as $value ) {
+		if ( ! isset( $value['file'] ) ) {
+			continue;
+		}
 		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
 			'function' => $value['function'],
-			'args'     => isset( $value['args'] ) ? array_filter( $value['args'], 'is_string' ) : false,
+			'args'     => isset( $value['args'] ) ? array_filter( $value['args'], function ( $arg ) { return ! empty( $arg ); } ) : false,
 		);
 	}
 
-	$formatted_trace = array_reverse( $formatted_trace );
-	write_log( $formatted_trace );
+	return array_reverse( $formatted_trace );
+}
+
+/**
+ * Log stack trace.
+ *
+ * @param array $trace The stack trace.
+ *
+ * @return void
+ * @throws Exception
+ */
+function log_stack_trace( array $trace ) {
+	write_log( format_stack_trace( $trace ) );
 }
 
 /**

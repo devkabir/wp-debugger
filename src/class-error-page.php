@@ -15,6 +15,8 @@ class Error_Page {
 	 * Constructor - Sets up error handling hooks and configuration
 	 */
 	public function __construct() {
+		add_filter( 'wp_die_ajax_handler', array( $this, 'handle_shutdown' ) );
+		add_filter( 'wp_die_json_handler', array( $this, 'handle_shutdown' ) );
 		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore
 		set_exception_handler( array( $this, 'handle' ) );
@@ -46,8 +48,8 @@ class Error_Page {
 	 * @return void
 	 */
 	public function handle( Throwable $throwable ): void {
-		if ( $this->isJsonRequest() ) {
-			$this->jsonHandler( $throwable );
+		if ( $this->is_json_request() ) {
+			$this->json_handler( $throwable );
 		} else {
 			$this->render( $throwable );
 		}
@@ -59,8 +61,10 @@ class Error_Page {
 	 *
 	 * @return bool True if request expects JSON, false otherwise
 	 */
-	private function isJsonRequest(): bool {
-		return ( isset( $_SERVER['CONTENT_TYPE'] ) && $_SERVER['CONTENT_TYPE'] === 'application/json' ) || ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false );
+	private function is_json_request(): bool {
+		return ( defined( 'WP_CLI' ) && WP_CLI )
+			|| ( isset( $_SERVER['CONTENT_TYPE'] ) && $_SERVER['CONTENT_TYPE'] === 'application/json' )
+			|| ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false );
 	}
 
 	/**
@@ -69,13 +73,13 @@ class Error_Page {
 	 * @param Throwable $throwable The exception to handle
 	 * @return void
 	 */
-	public function jsonHandler( Throwable $throwable ): void {
+	public function json_handler( Throwable $throwable ): void {
 		echo json_encode(
 			array(
 				'message'  => $throwable->getMessage(),
 				'file'     => $throwable->getFile(),
 				'line'     => $throwable->getLine(),
-				'trace'    => $throwable->getTrace(),
+				'trace'    => format_stack_trace($throwable->getTrace()),
 				'previous' => $throwable->getPrevious(),
 			),
 			JSON_PRETTY_PRINT
@@ -155,7 +159,7 @@ class Error_Page {
 	 * @return string HTML formatted variable dump
 	 */
 	public static function dump( $data ): string {
-		return Template::compile( array( '{{content}}' => var_export( $data, true ) ), Template::get_part( 'dump' ) );
+		return Template::compile( array( '{{content}}' => json_encode( $data, JSON_PRETTY_PRINT ) ), Template::get_part( 'dump' ) );
 	}
 
 	/**
@@ -199,7 +203,11 @@ class Error_Page {
 	 * @return void
 	 */
 	public function handle_shutdown(): void {
-		echo self::dump( error_get_last() );
+        if ( empty(error_get_last()) ) {
+            echo self::dump( debug_backtrace() );
+        } else {
+		    echo self::dump( error_get_last()  );            
+        }
 		die;
 	}
 }
