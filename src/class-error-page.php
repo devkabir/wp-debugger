@@ -111,21 +111,26 @@ class Error_Page {
 	private function generate_code_snippets( array $trace ): string {
 		$code_snippet_template = Template::get_part( 'code' );
 		$code_snippets         = '';
-
+		$trace                 = array_reverse( $trace );
 		foreach ( $trace as $index => $frame ) {
 			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
 				continue;
 			}
 
-			$file_path    = $frame['file'];
-			$line         = $frame['line'];
-			$editor       = "vscode://file/$file_path:$line";
-			$file_content = file_get_contents( $file_path ) ?? '';
-			$lines        = explode( "\n", $file_content );
-			$start_line   = max( 0, $frame['line'] - 5 );
-			$end_line     = min( count( $lines ), $frame['line'] + 5 );
-			$snippet      = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
-
+			$file_path            = $frame['file'];
+			$line                 = $frame['line'];
+			$editor               = "vscode://file/$file_path:$line";
+			$file_content         = file_get_contents( $file_path ) ?? '';
+			$lines                = explode( "\n", $file_content );
+			$start_line           = max( 0, $frame['line'] - 5 );
+			$end_line             = min( count( $lines ), $frame['line'] + 5 );
+			$snippet              = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
+			$args                 = array_filter(
+				$frame['args'],
+				function ( $arg ) {
+					return ! is_null( $arg );
+				}
+			);
 			$snippet_placeholders = array(
 				'{{open}}'         => $index ? '' : 'open',
 				'{{even}}'         => $index % 2 ? '' : 'bg-gray-200',
@@ -135,7 +140,7 @@ class Error_Page {
 				'{{end_line}}'     => $end_line,
 				'{{line_number}}'  => $frame['line'],
 				'{{code_snippet}}' => htmlspecialchars( $snippet ),
-				'{{args}}'         => self::dump( $frame['args'] ),
+				'{{args}}'         => empty( $args ) ? '' : self::dump( $frame['args'] ),
 			);
 
 			$code_snippets .= Template::compile( $snippet_placeholders, $code_snippet_template );
