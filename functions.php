@@ -28,7 +28,11 @@ function format_stack_trace( array $trace ): array {
 		}
 		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
 			'function' => $value['function'],
-			'args'     => isset( $value['args'] ) ? array_filter( $value['args'], function ( $arg ) { return ! empty( $arg ); } ) : false,
+			'args'     => isset( $value['args'] ) ? array_filter(
+				$value['args'],
+				function ( $arg ) {
+					return ! empty( $arg ); }
+			) : false,
 		);
 	}
 
@@ -66,8 +70,12 @@ function init_debugger() {
  * @throws Exception
  */
 function dump( $variable ) {
-	$compiled_data = DevKabir\WPDebugger\Template::compile( array( '{{content}}' => var_export( $variable, true ) ), DevKabir\WPDebugger\Template::get_part( 'dump' ) );
-	echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
+	if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
+		echo json_encode( $variable, JSON_PRETTY_PRINT );
+	} else {
+		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
+		echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
+	}
 }
 
 /**

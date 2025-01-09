@@ -2,6 +2,7 @@
 
 namespace DevKabir\WPDebugger;
 
+use ErrorException;
 use Throwable;
 /**
  * Class ErrorPage
@@ -33,10 +34,10 @@ class Error_Page {
 	 * @param string $errfile The filename that the error was raised in, as a string.
 	 * @param int    $errline The line number the error was raised at, as an integer.
 	 *
-	 * @throw \ErrorException The converted error as an Exception
+	 * @throws ErrorException The converted error as an Exception
 	 */
 	public function errors( $errno, $errstr, $errfile, $errline ): bool {
-		throw new \ErrorException( $errstr, 0, $errno, $errfile, $errline );
+		throw new ErrorException( $errstr, 0, $errno, $errfile, $errline );
 	}
 
 	/**
@@ -46,7 +47,7 @@ class Error_Page {
 	 * @return void
 	 */
 	public function handle( Throwable $throwable ): void {
-		if ( $this->is_json_request() ) {
+		if ( Plugin::get_instance()->is_json_request() ) {
 			$this->json_handler( $throwable );
 		} else {
 			$this->render( $throwable );
@@ -54,17 +55,6 @@ class Error_Page {
 
 		die;
 	}
-	/**
-	 * Determines if the current request expects a JSON response
-	 *
-	 * @return bool True if request expects JSON, false otherwise
-	 */
-	private function is_json_request(): bool {
-		return ( defined( 'WP_CLI' ) && WP_CLI )
-			|| ( isset( $_SERVER['CONTENT_TYPE'] ) && $_SERVER['CONTENT_TYPE'] === 'application/json' )
-			|| ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false );
-	}
-
 	/**
 	 * Handles exceptions by outputting them in JSON format
 	 *

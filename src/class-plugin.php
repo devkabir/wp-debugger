@@ -202,4 +202,15 @@ class Plugin {
 	public function throw_exception(): void {
 		throw new \RuntimeException( 'Debugger initialized', 1 );
 	}
+
+    /**
+     * Determines if the current request expects a JSON response
+     *
+     * @return bool True if request expects JSON, false otherwise
+     */
+    public function is_json_request(): bool {
+        return ( defined( 'WP_CLI' ) && WP_CLI )
+            || ( isset( $_SERVER['CONTENT_TYPE'] ) && $_SERVER['CONTENT_TYPE'] === 'application/json' )
+            || ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false );
+    }
 }
