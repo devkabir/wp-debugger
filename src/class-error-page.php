@@ -15,8 +15,6 @@ class Error_Page {
 	 * Constructor - Sets up error handling hooks and configuration
 	 */
 	public function __construct() {
-		add_filter( 'wp_die_ajax_handler', array( $this, 'handle_shutdown' ) );
-		add_filter( 'wp_die_json_handler', array( $this, 'handle_shutdown' ) );
 		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore
 		set_exception_handler( array( $this, 'handle' ) );
