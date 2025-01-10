@@ -90,25 +90,3 @@ function dd( ...$data ) {
 	dump( func_get_args() );
 	die;
 }
-
-/**
- * Renders a checkbox field in the WordPress settings page.
- *
- * @param array $args An array containing the label and ID of the checkbox field.
- *
- * @var string $id The ID of the option to be saved in the database.
- */
-function render_settings_fields( array $args ) {
-	$option = get_option( $args['id'] );
-	echo '<input type="checkbox" id="' . $args['id'] . '" name="' . $args['id'] . '" value="1"' . checked( 1, $option, false ) . ' />';
-	echo '<label for="' . $args['id'] . '"> ' . $args['label'] . '</label>';
-}
-
-/**
- * Retrieves the value of the `show_debugger` option from the database.
- *
- * @return bool Whether the debug bar should be shown.
- */
-function show_debugbar(): bool {
-	return (bool) get_option( 'show_debugbar', false );
-}
