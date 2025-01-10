@@ -8,9 +8,10 @@
  * @return void
  */
 function write_log( ...$messages ) {
-	foreach ( $messages as $message ) {
-		DevKabir\WPDebugger\Plugin::get_instance()->log( $message );
-	}
+    $log = \DevKabir\WPDebugger\Log::get_instance();
+    foreach ( $messages as $message ) {
+        $log->write( $message );
+    }
 }
 
 /**
@@ -21,22 +22,23 @@ function write_log( ...$messages ) {
  * @return array The formatted trace.
  */
 function format_stack_trace( array $trace ): array {
-	$formatted_trace = array();
-	foreach ( $trace as $value ) {
-		if ( ! isset( $value['file'] ) ) {
-			continue;
-		}
-		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
-			'function' => $value['function'],
-			'args'     => isset( $value['args'] ) ? array_filter(
-				$value['args'],
-				function ( $arg ) {
-					return ! empty( $arg ); }
-			) : false,
-		);
-	}
+    $formatted_trace = array();
+    foreach ( $trace as $value ) {
+        if ( ! isset( $value['file'] ) ) {
+            continue;
+        }
+        $formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
+            'function' => $value['function'],
+            'args'     => isset( $value['args'] ) ? array_filter(
+                $value['args'],
+                function ( $arg ) {
+                    return ! empty( $arg );
+                }
+            ) : false,
+        );
+    }
 
-	return array_reverse( $formatted_trace );
+    return array_reverse( $formatted_trace );
 }
 
 /**
@@ -48,7 +50,7 @@ function format_stack_trace( array $trace ): array {
  * @throws Exception
  */
 function log_stack_trace( array $trace ) {
-	write_log( format_stack_trace( $trace ) );
+    write_log( format_stack_trace( $trace ) );
 }
 
 /**
@@ -58,7 +60,7 @@ function log_stack_trace( array $trace ) {
  * @throws Exception
  */
 function init_debugger() {
-	DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
+    DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
 }
 
 /**
@@ -70,12 +72,12 @@ function init_debugger() {
  * @throws Exception
  */
 function dump( $variable ) {
-	if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
-		echo json_encode( $variable, JSON_PRETTY_PRINT );
-	} else {
-		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
-		echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
-	}
+    if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
+        echo json_encode( $variable, JSON_PRETTY_PRINT );
+    } else {
+        $compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
+        echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
+    }
 }
 
 /**
@@ -87,6 +89,6 @@ function dump( $variable ) {
  * @throws Exception
  */
 function dd( ...$data ) {
-	dump( func_get_args() );
-	die;
+    dump( func_get_args() );
+    die;
 }

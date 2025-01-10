@@ -27,14 +27,17 @@ class Plugin {
      * the error page.
      */
     public function __construct() {
-        add_action( 'init', function (): void {
-            wp_deregister_script( 'heartbeat' );
-        } );
+        add_action(
+            'init',
+            static function (): void {
+                wp_deregister_script( 'heartbeat' );
+            }
+        );
         // Check if the plugin should be enabled based on the constant in wp-config.php.
         if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
             add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
         }
-
+        add_action( 'http_api_debug', array( $this, 'debug_api' ), 10, 5 );
         new Error_Page();
         if ( ! defined( 'SAVEQUERIES' ) ) {
             define( 'SAVEQUERIES', true );
@@ -76,7 +79,12 @@ class Plugin {
             wp_mkdir_p( $mock_logs_dir );
         }
 
-        $mock_urls = array( '/hosting' => array( 'is_enabled' => false, 'waf' => array( 'is_active' => false, ), ), );
+        $mock_urls = array(
+            '/hosting' => array(
+                'is_enabled' => false,
+                'waf'        => array( 'is_active' => false ),
+            ),
+        );
 
         foreach ( $mock_urls as $mock_url => $mock_response ) {
             if ( strpos( $url, $mock_url ) !== false ) {
@@ -86,54 +94,22 @@ class Plugin {
                     set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
                 }
 
-                return wp_json_encode( array( 'body'          => $mock_response,
-                                              'response'      => array( 'code' => 200, 'message' => 'OK', ),
-                                              'headers'       => array(),
-                                              'cookies'       => array(),
-                                              'http_response' => null,
-                ) );
+                return wp_json_encode(
+                    array(
+                        'body'          => $mock_response,
+                        'response'      => array(
+                            'code'    => 200,
+                            'message' => 'OK',
+                        ),
+                        'headers'       => array(),
+                        'cookies'       => array(),
+                        'http_response' => null,
+                    )
+                );
             }
         }
 
         return new WP_Error( '404', 'Interceptor enabled by wp-logger plugin.' );
-    }
-
-    /**
-     * Logs a message to a specified directory.
-     *
-     * @param mixed $message The message to be logged.
-     *
-     * @return void
-     */
-    public function log( $message ): void {
-        $log_file = sprintf( "%s/wp-debugger-%s.log", WP_CONTENT_DIR, gmdate( 'Y-m-d' ) );
-
-        if ( file_exists( $log_file ) && filesize( $log_file ) > 1024 * 1024 ) {
-            file_put_contents( $log_file, '' );
-        }
-
-        $message = $this->format_log_message( $message );
-        error_log( $message . PHP_EOL, 3, $log_file ); // phpcs:ignore
-    }
-
-    /**
-     * Formats a message with the current timestamp for logging.
-     *
-     * @param mixed $message The message to be formatted.
-     *
-     * @return string The formatted message with the timestamp.
-     */
-    public function format_log_message( $message ): string {
-        if ( is_array( $message ) || is_object( $message ) || is_iterable( $message ) ) {
-            $message = wp_json_encode( $message, 128 );
-        } else if ( is_string( $message ) ) {
-            $decoded = json_decode( $message, true );
-            if ( JSON_ERROR_NONE === json_last_error() ) {
-                $message = wp_json_encode( $decoded, 128 );
-            }
-        }
-
-        return sprintf( "[%s] %s", gmdate( 'Y-m-d H:i:s' ), $message );
     }
 
     /**
@@ -153,5 +129,26 @@ class Plugin {
      */
     public function is_json_request(): bool {
         return ( defined( 'WP_CLI' ) && WP_CLI ) || ( isset( $_SERVER['CONTENT_TYPE'] ) && $_SERVER['CONTENT_TYPE'] === 'application/json' ) || ( isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false );
+    }
+
+    /**
+     * @param $response
+     * @param $url
+     * @param $parsed_args
+     *
+     * @return void
+     */
+    function debug_api( $response, $url, $parsed_args ): void {
+        $log = Log::get_instance(
+            WP_CONTENT_DIR . '/api-debug.log',
+        );
+        if ( is_wp_error( $response ) ) {
+            $log->write( [
+                'URL'      => $url,
+                'Response' => $response->get_error_message(),
+                'Code'     => $response->get_error_code(),
+                'Data'     => $parsed_args,
+            ], 'ERROR' );
+        }
     }
 }
