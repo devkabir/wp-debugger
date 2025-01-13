@@ -103,7 +103,6 @@ class Error_Page {
 	private function generate_code_snippets( array $trace ): string {
 		$code_snippet_template = Template::get_part( 'code' );
 		$code_snippets         = '';
-		$trace                 = array_reverse( $trace );
 		foreach ( $trace as $index => $frame ) {
 			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
 				continue;
@@ -119,15 +118,13 @@ class Error_Page {
 			$snippet              = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
 			$args                 = $this->filter_array_recursive( $frame['args'] ?? array() );
 			$snippet_placeholders = array(
-				'{{open}}'         => $index ? '' : 'open',
-				'{{even}}'         => $index % 2 ? '' : 'bg-gray-200',
 				'{{editor_link}}'  => htmlspecialchars( $editor ),
 				'{{file_path}}'    => htmlspecialchars( $file_path ),
 				'{{start_line}}'   => $start_line,
 				'{{end_line}}'     => $end_line,
 				'{{line_number}}'  => $frame['line'],
 				'{{code_snippet}}' => htmlspecialchars( $snippet ),
-				'{{args}}'         => empty( $args ) ? '' : self::dump( $frame['args'] ),
+				'{{args}}'         => empty( $args ) ? '' : sprintf( "<h1 class='text-xl font-semibold'>Arguments</h1>%s",self::dump_args( $frame['args'] )),
 			);
 
 			$code_snippets .= Template::compile( $snippet_placeholders, $code_snippet_template );
@@ -135,14 +132,29 @@ class Error_Page {
 
 		return $code_snippets;
 	}
+
+	private function dump_args( array $data ) {
+		$template = "";
+		foreach ($data as $index => $value) {
+			$template .= self::dump($value);
+		}
+		return $template;	
+	}
+
 	/**
 	 * Creates a formatted dump of variable data
 	 *
-	 * @param mixed $data The data to dump
+	 * @param mixed $variable The data to dump
+	 *
 	 * @return string HTML formatted variable dump
 	 */
-	public static function dump( $data ): string {
-		return Template::compile( array( '{{content}}' => json_encode( $data, JSON_PRETTY_PRINT ) ), Template::get_part( 'dump' ) );
+	public static function dump( $variable ): string {
+		$data = json_encode( $variable, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+
+		return Template::compile(
+			[ '{{content}}' => $data ],
+			Template::get_part( 'dump' )
+		);
 	}
 
 	/**
@@ -167,8 +179,9 @@ class Error_Page {
 			if ( empty( $value ) ) {
 				continue;
 			}
+			ksort( $value );
 			$data = array(
-				'{{open}}'  => $index ? '' : 'open',
+				'{{open}}'  => 'open',
 				'{{name}}'  => $name,
 				'{{value}}' => self::dump( $value ),
 			);
