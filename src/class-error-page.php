@@ -67,7 +67,7 @@ class Error_Page {
 				'message'  => $throwable->getMessage(),
 				'file'     => $throwable->getFile(),
 				'line'     => $throwable->getLine(),
-				'trace'    => format_stack_trace($throwable->getTrace()),
+				'trace'    => format_stack_trace( $throwable->getTrace() ),
 				'previous' => $throwable->getPrevious(),
 			),
 			JSON_PRETTY_PRINT
@@ -117,12 +117,7 @@ class Error_Page {
 			$start_line           = max( 0, $frame['line'] - 5 );
 			$end_line             = min( count( $lines ), $frame['line'] + 5 );
 			$snippet              = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
-			$args                 = array_filter(
-				$frame['args'],
-				function ( $arg ) {
-					return ! is_null( $arg );
-				}
-			);
+			$args                 = $this->filter_array_recursive( $frame['args'] ?? array() );
 			$snippet_placeholders = array(
 				'{{open}}'         => $index ? '' : 'open',
 				'{{even}}'         => $index % 2 ? '' : 'bg-gray-200',
@@ -191,11 +186,33 @@ class Error_Page {
 	 * @return void
 	 */
 	public function handle_shutdown(): void {
-        if ( empty(error_get_last()) ) {
-            echo self::dump( debug_backtrace() );
-        } else {
-		    echo self::dump( error_get_last()  );            
-        }
+		if ( empty( error_get_last() ) ) {
+			echo self::dump( debug_backtrace() );
+		} else {
+			echo self::dump( error_get_last() );
+		}
 		die;
+	}
+
+	/**
+	 * Recursively filters an array to remove empty values.
+	 *
+	 * @param array $data The array to filter.
+	 *
+	 * @return array The filtered array.
+	 */
+	private function filter_array_recursive( array $data ): array {
+		$filtered_data = array_filter( $data );
+		foreach ( $filtered_data as $key => &$value ) {
+			if ( is_object( $value ) ) {
+				$filtered_data[ $key ] = get_class( $value );
+			} elseif ( is_array( $value ) ) {
+				$value = $this->filter_array_recursive( $value );
+				if ( empty( $value ) ) {
+					unset( $filtered_data[ $key ] );
+				}
+			}
+		}
+		return $filtered_data;
 	}
 }
