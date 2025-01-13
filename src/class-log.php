@@ -106,6 +106,9 @@ class Log {
 		$this->rotate_log_file();
 
 		// Write the log entry to the file.
+		if ( ! file_exists( $this->log_file ) ) {
+			touch( $this->log_file );
+		}
 		file_put_contents( $this->log_file, $log_entry, FILE_APPEND | LOCK_EX );
 	}
 
