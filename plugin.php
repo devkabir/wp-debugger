@@ -24,7 +24,7 @@
 |--------------------------------------------------------------------------
 */
 if ( ! defined( 'ABSPATH' ) ) {
-    die;
+	die;
 }
 
 define( 'DevKabir\WPDebugger\FILE', __FILE__ );
@@ -42,5 +42,5 @@ require_once __DIR__ . '/autoload.php';
 |--------------------------------------------------------------------------
 */
 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-    DevKabir\WPDebugger\Plugin::get_instance();
+	DevKabir\WPDebugger\Plugin::get_instance();
 }

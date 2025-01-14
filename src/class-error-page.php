@@ -124,7 +124,7 @@ class Error_Page {
 				'{{end_line}}'     => $end_line,
 				'{{line_number}}'  => $frame['line'],
 				'{{code_snippet}}' => htmlspecialchars( $snippet ),
-				'{{args}}'         => empty( $args ) ? '' : sprintf( "<h1 class='text-xl font-semibold'>Arguments</h1>%s",self::dump_args( $frame['args'] )),
+				'{{args}}'         => empty( $args ) ? '' : sprintf( "<h1 class='text-xl font-semibold'>Arguments</h1>%s", self::dump_args( $frame['args'] ) ),
 			);
 
 			$code_snippets .= Template::compile( $snippet_placeholders, $code_snippet_template );
@@ -134,11 +134,11 @@ class Error_Page {
 	}
 
 	private function dump_args( array $data ) {
-		$template = "";
-		foreach ($data as $index => $value) {
-			$template .= self::dump($value);
+		$template = '';
+		foreach ( $data as $index => $value ) {
+			$template .= self::dump( $value );
 		}
-		return $template;	
+		return $template;
 	}
 
 	/**
@@ -152,7 +152,7 @@ class Error_Page {
 		$data = json_encode( $variable, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 
 		return Template::compile(
-			[ '{{content}}' => $data ],
+			array( '{{content}}' => $data ),
 			Template::get_part( 'dump' )
 		);
 	}
