@@ -8,10 +8,10 @@
  * @return void
  */
 function write_log( ...$messages ) {
-    $log = \DevKabir\WPDebugger\Log::get_instance();
-    foreach ( $messages as $message ) {
-        $log->write( $message );
-    }
+	$log = \DevKabir\WPDebugger\Log::get_instance();
+	foreach ( $messages as $message ) {
+		$log->write( $message );
+	}
 }
 
 /**
@@ -22,23 +22,23 @@ function write_log( ...$messages ) {
  * @return array The formatted trace.
  */
 function format_stack_trace( array $trace ): array {
-    $formatted_trace = array();
-    foreach ( $trace as $value ) {
-        if ( ! isset( $value['file'] ) ) {
-            continue;
-        }
-        $formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
-            'function' => $value['function'],
-            'args'     => isset( $value['args'] ) ? array_filter(
-                $value['args'],
-                function ( $arg ) {
-                    return ! empty( $arg );
-                }
-            ) : false,
-        );
-    }
+	$formatted_trace = array();
+	foreach ( $trace as $value ) {
+		if ( ! isset( $value['file'] ) ) {
+			continue;
+		}
+		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
+			'function' => $value['function'],
+			'args'     => isset( $value['args'] ) ? array_filter(
+				$value['args'],
+				function ( $arg ) {
+					return ! empty( $arg );
+				}
+			) : false,
+		);
+	}
 
-    return array_reverse( $formatted_trace );
+	return array_reverse( $formatted_trace );
 }
 
 /**
@@ -50,7 +50,7 @@ function format_stack_trace( array $trace ): array {
  * @throws Exception
  */
 function log_stack_trace( array $trace ) {
-    write_log( format_stack_trace( $trace ) );
+	write_log( format_stack_trace( $trace ) );
 }
 
 /**
@@ -60,7 +60,7 @@ function log_stack_trace( array $trace ) {
  * @throws Exception
  */
 function init_debugger() {
-    DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
+	DevKabir\WPDebugger\Plugin::get_instance()->throw_exception();
 }
 
 /**
@@ -72,12 +72,12 @@ function init_debugger() {
  * @throws Exception
  */
 function dump( $variable ) {
-    if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
-        echo json_encode( $variable, JSON_PRETTY_PRINT );
-    } else {
-        $compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
-        echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
-    }
+	if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
+		echo json_encode( $variable, JSON_PRETTY_PRINT );
+	} else {
+		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
+		echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
+	}
 }
 
 /**
@@ -89,6 +89,34 @@ function dump( $variable ) {
  * @throws Exception
  */
 function dd( ...$data ) {
-    dump( func_get_args() );
-    die;
+	dump( func_get_args() );
+	die;
+}
+
+/**
+ * Dump all callbacks registered for a specific WordPress filter.
+ *
+ * @param string $filter The name of the filter.
+ * @param bool   $dump   Optional. Whether to dump or log the callbacks. Default is false for log.
+ */
+function dump_filter_callbacks( $filter, bool $dump = false ) {
+	global $wp_filter;
+
+	if ( ! isset( $wp_filter[ $filter ] ) ) {
+		echo "No callbacks found for filter: {$filter}";
+		return;
+	}
+
+	// WordPress 5.0+ uses WP_Hook objects.
+	$callbacks = $wp_filter[ $filter ];
+
+	if ( is_a( $callbacks, 'WP_Hook' ) ) {
+		$callbacks = $callbacks->callbacks;
+	}
+
+	if ( $dump ) {
+		dump( $callbacks );
+	} else {
+		write_log( $callbacks );
+	}
 }
