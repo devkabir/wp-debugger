@@ -99,7 +99,7 @@ function dd( ...$data ) {
  * @param string $filter The name of the filter.
  * @param bool   $dump   Optional. Whether to dump or log the callbacks. Default is false for log.
  */
-function dump_filter_callbacks( $filter, bool $dump = false ) {
+function dump_filter_callbacks( $filter, bool $dump = true ) {
 	global $wp_filter;
 
 	if ( ! isset( $wp_filter[ $filter ] ) ) {
