@@ -59,7 +59,7 @@ class Log {
 	 * @param int    $backup_files Number of backup files to keep.
 	 */
 	private function __construct( string $file_path = '0-debugger.log', int $max_file_size = 1048576, int $backup_files = 5 ) {
-		$this->log_file      = WP_CONTENT_DIR . '/' . $file_path;
+		$this->log_file      = $file_path;
 		$this->max_file_size = $max_file_size;
 		$this->backup_files  = $backup_files;
 	}
