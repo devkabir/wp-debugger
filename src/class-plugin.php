@@ -42,7 +42,7 @@ class Plugin {
 		if ( ! defined( 'SAVEQUERIES' ) ) {
 			define( 'SAVEQUERIES', true );
 		}
-		new Debug_Bar();
+		// new Debug_Bar();
 	}
 
 	/**
@@ -139,9 +139,7 @@ class Plugin {
 	 * @return void
 	 */
 	function debug_api( $response, $url, $parsed_args ): void {
-		$log = Log::get_instance(
-			WP_CONTENT_DIR . '/api-debug.log',
-		);
+		$log = Log::get_instance( 'api-debug.log' );
 		if ( is_wp_error( $response ) ) {
 			$log->write(
 				array(
