@@ -132,13 +132,15 @@ class Plugin {
 	}
 
 	/**
-	 * @param $response
-	 * @param $url
-	 * @param $parsed_args
-	 *
-	 * @return void
-	 */
-	function debug_api( $response, $url, $parsed_args ): void {
+     * Fires after an HTTP API response is received and before the response is returned.
+     *
+     * @param array|\WP_Error $response    HTTP response or \WP_Error object.
+     * @param string          $context     Context under which the hook is fired.
+     * @param string          $class       HTTP transport used.
+     * @param array           $parsed_args HTTP request arguments.
+     * @param string          $url         The request URL.
+     */
+    public function debug_api( $response, $context, $class, $parsed_args, $url ): void {
 		$log = Log::get_instance( 'api-debug.log' );
 		if ( is_wp_error( $response ) ) {
 			$log->write(
@@ -146,6 +148,8 @@ class Plugin {
 					'URL'      => $url,
 					'Response' => $response->get_error_message(),
 					'Code'     => $response->get_error_code(),
+					'Context'  => $context,
+					'Transport' => $class,
 					'Data'     => $parsed_args,
 				),
 				'ERROR'
