@@ -132,7 +132,7 @@ class Plugin {
 	}
 
 	/**
-	 * Fires after an HTTP API response is received and before the response is returned.
+	 * Logs HTTP API requests and responses to a debug log.
 	 *
 	 * @param array|\WP_Error $response    HTTP response or \WP_Error object.
 	 * @param string          $context     Context under which the hook is fired.
@@ -141,11 +141,16 @@ class Plugin {
 	 * @param string          $url         The request URL.
 	 */
 	public function debug_api( $response, $context, $class, $parsed_args, $url ): void {
+		$domain = wp_parse_url( $url, PHP_URL_HOST );
+
+		// Only log requests to the current site.
 		if ( \strpos( $url, \site_url() ) !== false ) {
 			return;
 		}
 
-		$log = Log::get_instance( 'api-debug.log' );
+		$log = Log::get_instance( $domain . '-api-debug.log' );
+
+		// Log errors.
 		if ( is_wp_error( $response ) ) {
 			$log->write(
 				array(
@@ -154,21 +159,26 @@ class Plugin {
 					'Code'     => $response->get_error_code(),
 					'Data'     => array(
 						'method'  => $parsed_args['method'],
-						'body'    => $parsed_args['body'],
+						'body'    => recursively_decode_json( $parsed_args['body'] ),
 						'headers' => $parsed_args['headers'],
 					),
 				),
 				'ERROR'
 			);
-		} else {
+
+			return;
+		}
+
+		// Log successful responses if the constant is defined.
+		if ( defined( 'WP_DEBUGGER_API_DEBUG' ) && WP_DEBUGGER_API_DEBUG ) {
 			$log->write(
 				array(
 					'URL'      => $url,
-					'Response' => $response,
-					'Code'     => 200,
+					'Response' => recursively_decode_json( wp_remote_retrieve_body( $response ), true ),
+					'Code'     => wp_remote_retrieve_response_code( $response ),
 					'Data'     => array(
 						'method'  => $parsed_args['method'],
-						'body'    => $parsed_args['body'],
+						'body'    => recursively_decode_json( $parsed_args['body'] ),
 						'headers' => $parsed_args['headers'],
 					),
 				),
