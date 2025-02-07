@@ -120,3 +120,29 @@ function dump_filter_callbacks( $filter, bool $dump = true ) {
 		write_log( $callbacks );
 	}
 }
+
+/**
+ * Recursively checks if a value is a JSON string, decodes it into an array,
+ * and ensures all elements are strings. If any element is JSON, it gets decoded recursively.
+ *
+ * @param mixed $data The input value to check.
+ * @return mixed The processed array or original value.
+ */
+function recursively_decode_json( $data ) {
+	// Check if input is a JSON string.
+	if ( is_string( $data ) ) {
+		$decoded = json_decode( $data, true );
+		if ( json_last_error() === JSON_ERROR_NONE ) {
+			$data = $decoded; // Convert to array.
+		}
+	}
+
+	// If it's an array, process its elements.
+	if ( is_array( $data ) ) {
+		foreach ( $data as $key => $value ) {
+			$data[ $key ] = recursively_decode_json( $value );
+		}
+	}
+
+	return $data;
+}
