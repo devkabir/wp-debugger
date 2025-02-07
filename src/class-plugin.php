@@ -141,6 +141,10 @@ class Plugin {
 	 * @param string          $url         The request URL.
 	 */
 	public function debug_api( $response, $context, $class, $parsed_args, $url ): void {
+		if ( \strpos( $url, \site_url() ) !== false ) {
+			return;
+		}
+
 		$log = Log::get_instance( 'api-debug.log' );
 		if ( is_wp_error( $response ) ) {
 			$log->write(
