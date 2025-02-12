@@ -8,7 +8,7 @@
  * @return void
  */
 function write_log( ...$messages ) {
-	$log = \DevKabir\WPDebugger\Log::get_instance();
+	$log = new \DevKabir\WPDebugger\Log();
 	foreach ( $messages as $message ) {
 		$log->write( $message );
 	}

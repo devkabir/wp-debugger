@@ -9,19 +9,10 @@
 
 namespace DevKabir\WPDebugger;
 
-use Exception;
-
 /**
  * Class Log
  */
 class Log {
-
-	/**
-	 * The single instance of the Log class.
-	 *
-	 * @var Log|null
-	 */
-	private static ?Log $instance = null;
 
 	/**
 	 * Path to the log file.
@@ -58,23 +49,10 @@ class Log {
 	 * @param int    $max_file_size Maximum file size in bytes before rotation.
 	 * @param int    $backup_files Number of backup files to keep.
 	 */
-	private function __construct( string $file_path = '0-debugger.log', int $max_file_size = 1048576, int $backup_files = 5 ) {
+	public function __construct( string $file_path = '0-debugger.log', int $max_file_size = 1048576, int $backup_files = 5 ) {
 		$this->log_file      = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $file_path;
 		$this->max_file_size = $max_file_size;
 		$this->backup_files  = $backup_files;
-	}
-
-	/**
-	 * Retrieves the single instance of the Log class.
-	 *
-	 * @return Log The single instance of the Log class.
-	 */
-	public static function get_instance(): ?Log {
-		if ( null === self::$instance ) {
-			self::$instance = new self( ...func_get_args() );
-		}
-
-		return self::$instance;
 	}
 
 	/**

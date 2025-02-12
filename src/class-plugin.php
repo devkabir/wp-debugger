@@ -148,7 +148,7 @@ class Plugin {
 			return;
 		}
 
-		$log = Log::get_instance( $domain . '-api-debug.log' );
+		$log = new Log( $domain . '-api-debug.log' );
 
 		// Log errors.
 		if ( is_wp_error( $response ) ) {
