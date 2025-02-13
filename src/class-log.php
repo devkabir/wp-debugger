@@ -50,7 +50,7 @@ class Log {
 	 * @param int    $backup_files Number of backup files to keep.
 	 */
 	public function __construct( string $file_path = '0-debugger.log', int $max_file_size = 1048576, int $backup_files = 5 ) {
-		$this->log_file      = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . $file_path;
+		$this->log_file      = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $file_path;
 		$this->max_file_size = $max_file_size;
 		$this->backup_files  = $backup_files;
 	}
@@ -84,8 +84,8 @@ class Log {
 		$this->rotate_log_file();
 
 		// Write the log entry to the file.
-		if ( ! file_exists( $this->log_file ) ) {
-			touch( $this->log_file );
+		if ( ! file_exists( dirname( $this->log_file ) ) ) {
+			mkdir( dirname( $this->log_file ), 0775, true );
 		}
 		file_put_contents( $this->log_file, $log_entry, FILE_APPEND | LOCK_EX );
 	}

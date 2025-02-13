@@ -38,7 +38,7 @@ function format_stack_trace( array $trace ): array {
 		);
 	}
 
-	return array_reverse( $formatted_trace );
+	return $formatted_trace;
 }
 
 /**
