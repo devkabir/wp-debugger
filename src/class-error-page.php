@@ -90,7 +90,6 @@ class Error_Page {
 		$exception = Template::get_part( 'exception' );
 		$exception = Template::compile( $data, $exception );
 		$output    = Template::compile( array( '{{content}}' => $exception ), $layout );
-		http_response_code( 500 );
 		echo $output;
 	}
 
