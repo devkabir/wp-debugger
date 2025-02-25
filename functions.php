@@ -66,16 +66,16 @@ function init_debugger() {
 /**
  * Outputs a formatted dump of a variable for debugging purposes.
  *
- * @param mixed $variable The variable to dump.
+ * @param mixed func_get_args The variable to dump.
  *
  * @return void
  * @throws Exception
  */
-function dump( $variable ) {
+function dump() {
 	if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
-		echo json_encode( $variable, JSON_PRETTY_PRINT );
+		echo debugger_format_variable( func_get_args() );
 	} else {
-		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( $variable );
+		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( func_get_args() );
 		echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
 	}
 }
@@ -83,12 +83,12 @@ function dump( $variable ) {
 /**
  * Dump a variable and stop execution.
  *
- * @param mixed $data The variable to dump.
+ * @param mixed  The variable to dump.
  *
  * @return void
  * @throws Exception
  */
-function dd( ...$data ) {
+function dd() {
 	dump( func_get_args() );
 	die;
 }
@@ -145,4 +145,26 @@ function recursively_decode_json( $data ) {
 	}
 
 	return $data;
+}
+
+/**
+ * Formats a message with the current timestamp for logging.
+ *
+ * @param mixed $message The message to be formatted.
+ *
+ * @return string The formatted message with the timestamp.
+ */
+function debugger_format_variable( $message ): string {
+	if ( is_array( $message ) ) {
+		$message = wp_json_encode( $message, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	} elseif ( is_object( $message ) ) {
+		$message = get_class( $message );
+	} elseif ( is_string( $message ) ) {
+		$decoded = json_decode( $message, true );
+		if ( JSON_ERROR_NONE === json_last_error() ) {
+			$message = wp_json_encode( $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		}
+	}
+
+	return $message;
 }

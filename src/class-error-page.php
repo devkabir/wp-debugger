@@ -148,7 +148,7 @@ class Error_Page {
 	 * @return string HTML formatted variable dump
 	 */
 	public static function dump( $variable ): string {
-		$data = json_encode( $variable, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		$data = debugger_format_variable( $variable );
 
 		return Template::compile(
 			array( '{{content}}' => $data ),

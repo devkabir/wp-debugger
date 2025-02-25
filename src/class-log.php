@@ -76,7 +76,7 @@ class Log {
 			'[%s] [%s]: %s%s',
 			$timestamp,
 			$level,
-			$this->format( $message ),
+			debugger_format_variable( $message ),
 			PHP_EOL
 		);
 
@@ -88,28 +88,6 @@ class Log {
 			mkdir( dirname( $this->log_file ), 0775, true );
 		}
 		file_put_contents( $this->log_file, $log_entry, FILE_APPEND | LOCK_EX );
-	}
-
-	/**
-	 * Formats a message with the current timestamp for logging.
-	 *
-	 * @param mixed $message The message to be formatted.
-	 *
-	 * @return string The formatted message with the timestamp.
-	 */
-	public function format( $message ): string {
-		if ( is_array( $message ) ) {
-			$message = wp_json_encode( $message, 128 );
-		} elseif ( is_object( $message ) ) {
-			$message = get_class( $message );
-		} elseif ( is_string( $message ) ) {
-			$decoded = json_decode( $message, true );
-			if ( JSON_ERROR_NONE === json_last_error() ) {
-				$message = wp_json_encode( $decoded, 128 );
-			}
-		}
-
-		return $message;
 	}
 
 	/**
