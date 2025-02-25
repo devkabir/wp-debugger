@@ -2,7 +2,11 @@
 module.exports = {
     content: ["./templates/page/*.html"],
     theme: {
-        extend: {},
+        extend: {
+            zIndex: {
+                'wp': '999999',
+            }
+        },
     },
     plugins: [],
 }

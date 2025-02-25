@@ -558,8 +558,16 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
   position: absolute;
 }
 
-.wp-debugger .z-50 {
-  z-index: 50;
+.wp-debugger .right-0 {
+  right: 0px;
+}
+
+.wp-debugger .top-0 {
+  top: 0px;
+}
+
+.wp-debugger .z-wp {
+  z-index: 999999;
 }
 
 .wp-debugger .mx-auto {
@@ -586,14 +594,6 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
 
 .wp-debugger .cursor-pointer {
   cursor: pointer;
-}
-
-.wp-debugger .justify-center {
-  justify-content: center;
-}
-
-.wp-debugger .gap-4 {
-  gap: 1rem;
 }
 
 .wp-debugger .space-y-4 > :not([hidden]) ~ :not([hidden]) {
@@ -715,22 +715,4 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
 
 .wp-debugger .hover\:underline:hover {
   text-decoration-line: underline;
-}
-
-@media (min-width: 1280px) {
-  .wp-debugger .xl\:order-1 {
-    order: 1;
-  }
-
-  .wp-debugger .xl\:flex {
-    display: flex;
-  }
-
-  .wp-debugger .xl\:w-1\/3 {
-    width: 33.333333%;
-  }
-
-  .wp-debugger .xl\:w-2\/3 {
-    width: 66.666667%;
-  }
 }
