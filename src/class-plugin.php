@@ -27,12 +27,6 @@ class Plugin {
 	 * the error page.
 	 */
 	public function __construct() {
-		add_action(
-			'init',
-			static function (): void {
-				wp_deregister_script( 'heartbeat' );
-			}
-		);
 		// Check if the plugin should be enabled based on the constant in wp-config.php.
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
