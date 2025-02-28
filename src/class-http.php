@@ -39,43 +39,43 @@ class Http {
 	 * @return array|bool|string|WP_Error Mock response or false to allow original request.
 	 */
 	public function intercept_http_requests( $preempt, array $args, string $url ) {
-		if ( strpos( $url, 'https://wpmudev.com/api/' ) === false ) {
+		// Only log requests to the external site.
+		if ( \strpos( $url, \site_url() ) !== false ) {
 			return $preempt;
 		}
 
-		$mock_logs_dir = WP_CONTENT_DIR . '/mock-logs';
+		$allowed_domainds = array(
+			'wpmudev.com',
+			'rest.akismet.com',
+		);
+		$requested_host   = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! in_array( $requested_host, $allowed_domainds, true ) ) {
+			error_log( 'Domain not allowed: ' . $requested_host );
+			return $preempt;
+		}
+
+		$mock_logs_dir = ABSPATH . 'wp-content/mock-logs';
 		if ( ! is_dir( $mock_logs_dir ) ) {
 			wp_mkdir_p( $mock_logs_dir );
 		}
 
-		$mock_urls = array(
-			'/hosting' => array(
-				'is_enabled' => false,
-				'waf'        => array( 'is_active' => false ),
-			),
+		$mock_urls     = array(
+			'https://rest.akismet.com/1.1/comment-check' => true,
 		);
-
-		foreach ( $mock_urls as $mock_url => $mock_response ) {
-			if ( strpos( $url, $mock_url ) !== false ) {
-				if ( isset( $args['method'] ) && strtoupper( $args['method'] ) === 'POST' && isset( $args['body'] ) ) {
-					$post_data     = wp_parse_args( $args['body'] );
-					$transient_key = 'mock_post_data_' . md5( $url . $args['method'] );
-					set_transient( $transient_key, $post_data, 60 * 60 ); // Store for 1 hour
-				}
-
-				return wp_json_encode(
-					array(
-						'body'          => $mock_response,
-						'response'      => array(
-							'code'    => 200,
-							'message' => 'OK',
-						),
-						'headers'       => array(),
-						'cookies'       => array(),
-						'http_response' => null,
-					)
-				);
-			}
+		$mock_response = $mock_urls[ $url ] ?? false;
+		if ( $mock_response ) {
+			return wp_json_encode(
+				array(
+					'body'          => $mock_response,
+					'response'      => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'headers'       => array(),
+					'cookies'       => array(),
+					'http_response' => null,
+				)
+			);
 		}
 
 		return new WP_Error( '404', 'Interceptor enabled by wp-logger plugin.' );
