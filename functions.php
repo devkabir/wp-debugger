@@ -166,5 +166,5 @@ function debugger_format_variable( $message ): string {
 		}
 	}
 
-	return $message;
+	return (string) $message;
 }
