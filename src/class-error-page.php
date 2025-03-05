@@ -34,16 +34,16 @@ class Error_Page {
 	 * @param string $errfile The filename that the error was raised in, as a string.
 	 * @param int    $errline The line number the error was raised at, as an integer.
 	 *
-	 * @throws ErrorException The converted error as an Exception
+	 * @throws \ErrorException The converted error as an Exception.
 	 */
-	public function errors( $errno, $errstr, $errfile, $errline ): bool {
-		throw new ErrorException( $errstr, 0, $errno, $errfile, $errline );
+	public function errors( $errno, $errstr, $errfile, $errline ) {
+		$this->handle( new ErrorException( $errstr, 0, $errno, $errfile, $errline ) );
 	}
 
 	/**
 	 * Handles thrown exceptions and errors
 	 *
-	 * @param Throwable $throwable The exception or error to handle
+	 * @param Throwable $throwable The exception or error to handle.
 	 * @return void
 	 */
 	public function handle( Throwable $throwable ): void {
@@ -77,19 +77,25 @@ class Error_Page {
 	/**
 	 * Renders the exception in HTML format using a template
 	 *
-	 * @param Throwable $throwable The exception to render
+	 * @param Throwable $throwable The exception to render.
 	 * @return void
 	 */
 	private function render( Throwable $throwable ): void {
-		$layout    = Template::get_layout();
-		$data      = array(
+		$layout        = Template::get_layout();
+		$trace         = $throwable->getTrace();
+		$trigger_point = array(
+			'file' => $throwable->getFile(),
+			'line' => $throwable->getLine(),
+		);
+		$trace         = array_merge( array( $trigger_point ), $trace );
+		$data          = array(
 			'{{exception_message}}' => htmlspecialchars( $throwable->getMessage() ),
-			'{{code_snippets}}'     => $this->generate_code_snippets( $throwable->getTrace() ),
+			'{{code_snippets}}'     => $this->generate_code_snippets( $trace ),
 			'{{superglobals}}'      => $this->compile_globals(),
 		);
-		$exception = Template::get_part( 'exception' );
-		$exception = Template::compile( $data, $exception );
-		$output    = Template::compile( array( '{{content}}' => $exception ), $layout );
+		$exception     = Template::get_part( 'exception' );
+		$exception     = Template::compile( $data, $exception );
+		$output        = Template::compile( array( '{{content}}' => $exception ), $layout );
 		echo $output;
 	}
 
