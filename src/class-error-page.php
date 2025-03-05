@@ -49,6 +49,7 @@ class Error_Page {
 	public function handle( Throwable $throwable ): void {
 		if ( Plugin::get_instance()->is_json_request() ) {
 			$this->json_handler( $throwable );
+			error_log( $throwable->getMessage() ); // phpcs:ignore
 		} else {
 			$this->render( $throwable );
 		}
