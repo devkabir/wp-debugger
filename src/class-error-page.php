@@ -17,9 +17,9 @@ class Error_Page {
 	 */
 	public function __construct() {
 		add_filter( 'wp_die_handler', array( $this, 'handle_shutdown' ) );
-		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore
+		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		set_exception_handler( array( $this, 'handle' ) );
-		error_reporting( -1 ); // phpcs:ignore
+		error_reporting( -1 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
@@ -59,11 +59,12 @@ class Error_Page {
 	/**
 	 * Handles exceptions by outputting them in JSON format
 	 *
-	 * @param Throwable $throwable The exception to handle
+	 * @param Throwable $throwable The exception to handle.
+	 *
 	 * @return void
 	 */
 	public function json_handler( Throwable $throwable ): void {
-		echo json_encode(
+		echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions
 			array(
 				'message'  => $throwable->getMessage(),
 				'file'     => $throwable->getFile(),
