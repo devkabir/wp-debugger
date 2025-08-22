@@ -44,37 +44,38 @@ class Http {
 			return $preempt;
 		}
 
-		$allowed_domainds = array(
+		$allowed_domains = array(
 			'wpmudev.com',
 			'rest.akismet.com',
 		);
-		$requested_host   = wp_parse_url( $url, PHP_URL_HOST );
-		if ( ! in_array( $requested_host, $allowed_domainds, true ) ) {
-			error_log( 'Domain not allowed: ' . $requested_host );
+		$requested_host  = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! in_array( $requested_host, $allowed_domains, true ) ) {
+			error_log( 'Skipping request logging for  ' . $requested_host );
 			return $preempt;
 		}
 
-		$mock_logs_dir = ABSPATH . 'wp-content/mock-logs';
-		if ( ! is_dir( $mock_logs_dir ) ) {
-			wp_mkdir_p( $mock_logs_dir );
-		}
-
-		$mock_urls     = array(
+		$mock_urls = array(
 			'https://rest.akismet.com/1.1/comment-check' => true,
 		);
+		/**
+		 * Add a filter to the mock_urls array.
+		 *
+		 * @param array $mock_urls Mock URLs array.
+		 *
+		 * @return array
+		 */
+		$mock_urls     = apply_filters( 'wp_debugger_mock_urls', $mock_urls );
 		$mock_response = $mock_urls[ $url ] ?? false;
 		if ( $mock_response ) {
-			return wp_json_encode(
-				array(
-					'body'          => $mock_response,
-					'response'      => array(
-						'code'    => 200,
-						'message' => 'OK',
-					),
-					'headers'       => array(),
-					'cookies'       => array(),
-					'http_response' => null,
-				)
+			return array(
+				'body'          => wp_json_encode( $mock_response ),
+				'response'      => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'headers'       => array(),
+				'cookies'       => array(),
+				'http_response' => null,
 			);
 		}
 
@@ -124,7 +125,7 @@ class Http {
 			$log->write(
 				array(
 					'URL'      => $url,
-					'Response' => recursively_decode_json( wp_remote_retrieve_body( $response ), true ),
+					'Response' => recursively_decode_json( wp_remote_retrieve_body( $response ) ),
 					'Code'     => wp_remote_retrieve_response_code( $response ),
 					'Data'     => array(
 						'method'  => $parsed_args['method'],

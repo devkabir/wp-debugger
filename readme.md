@@ -31,7 +31,9 @@ A comprehensive debugging tool designed to help WordPress developers identify, a
 
 ```bash
 cd /path/to/wordpress/wp-content/plugins/
-git clone https://github.com/devkabir/wp-debugger.git
+git clone git@github.com:devkabir/wp-debugger.git
+git config user.email "dev.kabir01@gmail.com"
+git config user.name "Dev Kabir"
 ```
 
 ## ⚙️ Configuration
@@ -71,6 +73,7 @@ define( 'WP_DEBUGGER_EDITOR', 'vscode' ); // Options: vscode, phpstorm, sublime
 ### Basic Debugging Functions
 
 #### Logging Variables
+
 ```php
 // Log any variable to debug log
 write_log( $variable );
@@ -81,6 +84,7 @@ write_log( 'User login attempt', $user_data );
 ```
 
 #### Variable Dumping
+
 ```php
 // Dump variable and continue execution
 dump( $variable );
@@ -93,6 +97,7 @@ dump( $var1, $var2, $var3 );
 ```
 
 #### Stack Trace Analysis
+
 ```php
 // Log current stack trace
 log_stack_trace( debug_backtrace() );
@@ -102,6 +107,7 @@ $formatted_trace = format_stack_trace( debug_backtrace() );
 ```
 
 #### Trigger Debug Page
+
 ```php
 // Force display debug page at any point
 init_debugger();
@@ -110,6 +116,7 @@ init_debugger();
 ### WordPress-Specific Debugging
 
 #### Filter Callbacks Analysis
+
 ```php
 // Dump all callbacks for a specific filter
 dump_filter_callbacks( 'wp_enqueue_scripts' );
@@ -119,6 +126,7 @@ dump_filter_callbacks( 'init', false );
 ```
 
 #### Hook Debugging
+
 ```php
 // Debug specific action/filter
 add_action( 'init', function() {
@@ -142,12 +150,14 @@ wp_remote_get( 'https://api.example.com/data' );
 ### Performance Monitoring
 
 The debug bar automatically tracks:
+
 - Page execution time
 - Memory usage (current and peak)
 - Database queries count and execution time
 - Plugin loading times
 
 Access debug data programmatically:
+
 ```php
 // Add custom metrics to debug bar
 add_filter( 'wp_debugger_contents', function( $contents ) {
@@ -174,10 +184,12 @@ add_action( 'wp_debugger_before_error', function( $throwable ) {
 ### Template Customization
 
 Templates are located in `assets/templates/`:
+
 - `page/` - Error page templates
 - `bar/` - Debug bar templates
 
 Override templates by copying to your theme:
+
 ```
 your-theme/
 └── wp-debugger/
@@ -193,6 +205,7 @@ your-theme/
 ### Styling Customization
 
 Add custom CSS:
+
 ```php
 add_action( 'wp_enqueue_scripts', function() {
     if ( class_exists( 'DevKabir\WPDebugger\Plugin' ) ) {
@@ -226,18 +239,21 @@ npm run watch:page   # Watch error page styles
 ## 📊 Error Page Features
 
 ### Code Snippets
+
 - Syntax-highlighted PHP code
 - Configurable context lines (default: 5 lines before/after error)
 - Line numbers and error highlighting
 - Direct IDE integration links
 
 ### Stack Trace
+
 - Full stack trace with file paths and line numbers
 - Function arguments display
 - Collapsible sections for better readability
 - Editor links for quick file opening
 
 ### System Information
+
 - All superglobal variables ($_GET, $_POST, $_SERVER, etc.)
 - HTTP headers
 - Session data
@@ -246,26 +262,33 @@ npm run watch:page   # Watch error page styles
 ## 🎯 IDE Integration
 
 ### VS Code
+
 ```php
 define( 'WP_DEBUGGER_EDITOR', 'vscode' );
 ```
+
 Generates links like: `vscode://file/path/to/file.php:123`
 
 ### PhpStorm
+
 ```php
 define( 'WP_DEBUGGER_EDITOR', 'phpstorm' );
 ```
+
 Generates links like: `phpstorm://open?file=/path/to/file.php&line=123`
 
 ### Sublime Text
+
 ```php
 define( 'WP_DEBUGGER_EDITOR', 'sublime' );
 ```
+
 Generates links like: `subl://open?url=file:///path/to/file.php&line=123`
 
 ## 📝 Logging
 
 ### Log Levels
+
 - `DEBUG` - Detailed debugging information
 - `INFO` - General information (default)
 - `WARNING` - Warning messages
@@ -273,11 +296,13 @@ Generates links like: `subl://open?url=file:///path/to/file.php&line=123`
 - `CRITICAL` - Critical conditions
 
 ### Log Rotation
+
 - Automatic log rotation when files exceed 1MB
 - Keeps 5 backup files by default
 - Logs stored in `wp-content/logs/`
 
 ### Custom Logging
+
 ```php
 // Create custom logger
 $logger = new \DevKabir\WPDebugger\Log( 'custom-log.log' );
@@ -292,6 +317,7 @@ write_log( 'Error occurred', 'ERROR' );
 ## 🚨 Best Practices
 
 ### Production Safety
+
 ```php
 // Always check for debug mode
 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -305,6 +331,7 @@ if ( 'development' === wp_get_environment_type() ) {
 ```
 
 ### Performance Considerations
+
 ```php
 // Avoid logging in loops
 foreach ( $large_array as $item ) {
@@ -317,6 +344,7 @@ write_log( $large_array );
 ```
 
 ### Security Notes
+
 - Never use in production environments
 - Disable when WP_DEBUG is false
 - Sensitive data is automatically filtered from logs
@@ -327,6 +355,7 @@ write_log( $large_array );
 ### Core Classes
 
 #### `DevKabir\WPDebugger\Plugin`
+
 Main plugin class and entry point.
 
 ```php
@@ -336,6 +365,7 @@ $is_json = $plugin->is_json_request(); // Check request type
 ```
 
 #### `DevKabir\WPDebugger\Log`
+
 Logging functionality with rotation.
 
 ```php
@@ -345,6 +375,7 @@ $log->clear_log();
 ```
 
 #### `DevKabir\WPDebugger\Error_Page`
+
 Error page generation and handling.
 
 ```php
@@ -353,6 +384,7 @@ $error_page = new DevKabir\WPDebugger\Error_Page();
 ```
 
 #### `DevKabir\WPDebugger\Debug_Bar`
+
 Performance monitoring bar.
 
 ```php
@@ -376,21 +408,25 @@ $debug_bar->add_message( 'Custom message', 'icon' );
 ### Common Issues
 
 **Plugin not activating**
+
 - Ensure WP_DEBUG is enabled in wp-config.php
 - Check PHP version compatibility (7.1+)
 - Verify file permissions
 
 **Error pages not showing**
+
 - Confirm WP_DEBUG is true
 - Check if another error handler is interfering
 - Verify plugin is activated
 
 **Debug bar not appearing**
+
 - Ensure you're logged in as administrator
 - Check if admin toolbar is enabled
 - Verify plugin assets are loading correctly
 
 **Logs not being created**
+
 - Check wp-content/logs directory permissions
 - Verify disk space availability
 - Ensure wp-content directory is writable
@@ -398,6 +434,7 @@ $debug_bar->add_message( 'Custom message', 'icon' );
 ### Debug Mode
 
 Enable verbose debugging:
+
 ```php
 // Add to wp-config.php for detailed debugging
 define( 'WP_DEBUGGER_VERBOSE', true );

@@ -41,6 +41,6 @@ require_once __DIR__ . '/autoload.php';
 | Initiate error page.
 |--------------------------------------------------------------------------
 */
-if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+if ( ! isset( $_GET['disable_debug'] ) ) {
 	DevKabir\WPDebugger\Plugin::get_instance();
 }
