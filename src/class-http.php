@@ -16,6 +16,7 @@ use WP_Error;
  * Debug HTTP API requests and responses to a debug log.
  */
 class Http {
+
 	/**
 	 * Constructor for the Http class.
 	 *
@@ -44,16 +45,6 @@ class Http {
 			return $preempt;
 		}
 
-		$allowed_domains = array(
-			'wpmudev.com',
-			'rest.akismet.com',
-		);
-		$requested_host  = wp_parse_url( $url, PHP_URL_HOST );
-		if ( ! in_array( $requested_host, $allowed_domains, true ) ) {
-			error_log( 'Skipping request logging for  ' . $requested_host );
-			return $preempt;
-		}
-
 		$mock_urls = array(
 			'https://rest.akismet.com/1.1/comment-check' => true,
 		);
@@ -66,20 +57,19 @@ class Http {
 		 */
 		$mock_urls     = apply_filters( 'wp_debugger_mock_urls', $mock_urls );
 		$mock_response = $mock_urls[ $url ] ?? false;
-		if ( $mock_response ) {
-			return array(
-				'body'          => wp_json_encode( $mock_response ),
-				'response'      => array(
-					'code'    => 200,
-					'message' => 'OK',
-				),
-				'headers'       => array(),
-				'cookies'       => array(),
-				'http_response' => null,
-			);
+		if ( ! $mock_response ) {
+			return $preempt;
 		}
-
-		return new WP_Error( '404', 'Interceptor enabled by wp-logger plugin.' );
+		$mock_response['message'] = 'Interceptor enabled by wp-logger plugin.';
+		return array(
+			'body'          => wp_json_encode( $mock_response ),
+			'response'      => array(
+				'code' => 200,
+			),
+			'headers'       => array(),
+			'cookies'       => array(),
+			'http_response' => null,
+		);
 	}
 
 	/**
