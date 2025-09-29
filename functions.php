@@ -3,12 +3,26 @@
 /**
  * Logs a message to a specified directory.
  *
- * @param mixed ...$messages The messages to be logged.
+ * @param mixed ...$messages The messages to be logged. If the last argument is a string
+ *                           ending with '.log', it will be treated as the filename.
  *
  * @return void
+ *
+ * @example write_log('Debug message'); // Logs to default file
+ * @example write_log('Error occurred', 'errors.log'); // Logs to custom file
+ * @example write_log($data, $trace, 'debug.log'); // Multiple messages to custom file
  */
 function write_log( ...$messages ) {
-	$log = new \DevKabir\WPDebugger\Log();
+	$filename = '0-debugger.log';
+
+	if ( count( $messages ) > 0 ) {
+		$last_message = end( $messages );
+		if ( is_string( $last_message ) && str_ends_with( $last_message, '.log' ) ) {
+			$filename = array_pop( $messages );
+		}
+	}
+
+	$log = new \DevKabir\WPDebugger\Log( $filename );
 	foreach ( $messages as $message ) {
 		$log->write( $message );
 	}

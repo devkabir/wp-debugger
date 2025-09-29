@@ -74,7 +74,7 @@ class Http {
 
 		$mock_response = $mock_urls[ $url ] ?? null;
 		foreach ( $mock_urls as $mock_url => $response_data ) {
-			if ( $url === $mock_url || fnmatch( $mock_url, $url ) ) {
+			if ( \strpos( $url, $mock_url ) !== false ) {
 				$mock_response = $response_data;
 				break;
 			}
