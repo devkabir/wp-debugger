@@ -40,15 +40,23 @@ class Template {
 	 * @return string
 	 */
 	public static function compile( $data, string $template ): string {
+		if ( is_array( $data ) && isset( $data['{{content}}'] ) ) {
+			$content = (string) $data['{{content}}'];
+			if ( false === strpos( $content, 'id="wp-debugger"' ) && false === strpos( $content, "id='wp-debugger'" ) ) {
+				$data['{{content}}'] = '<div id="wp-debugger">' . $content . '</div>';
+			}
+		}
+
 		return str_replace( array_keys( $data ), array_values( $data ), $template );
 	}
 
 	public static function get_layout(): string {
 		return self::compile(
 			array(
-				'{{css_url}}'       => self::get_asset( 'css/page.css' ),
-				'{{prism_css_url}}' => self::get_asset( 'css/prism.css' ),
-				'{{prism_js_url}}'  => self::get_asset( 'js/prism.js' ),
+				'{{css_url}}'           => self::get_asset( 'css/page.css' ),
+				'{{prism_css_url}}'     => self::get_asset( 'css/prism.css' ),
+				'{{prism_js_url}}'      => self::get_asset( 'js/prism.js' ),
+				'{{copy_trace_js_url}}' => self::get_asset( 'js/copy-stack-trace.js' ),
 			),
 			self::get_part( 'layout' )
 		);

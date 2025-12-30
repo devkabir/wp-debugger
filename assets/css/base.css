@@ -1,0 +1,7 @@
+@tailwind base;
+
+@layer base {
+	:root {
+		color-scheme: light;
+	}
+}

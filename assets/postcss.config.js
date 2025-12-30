@@ -1,11 +1,14 @@
+const tailwindConfig = process.env.TW_CONFIG || './tailwind.page.config.js';
+
 module.exports = {
     plugins: {
+        'postcss-import': {},
         tailwindcss: {
-            config: './tailwind.page.config.js',
+            config: tailwindConfig,
         },
         autoprefixer: {},
         'postcss-prefix-selector': {
-            prefix: '.wp-debugger',
+            prefix: '#wp-debugger',
         },
     }
-}
+};

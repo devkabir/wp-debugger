@@ -8,6 +8,12 @@
             </p>
             <div class="mb-6">
                 <h2 class="text-xl font-semibold">Stack Trace:</h2>
+                <div class="mb-4">
+                    <button type="button" class="bg-gray-800 text-white px-3 py-1 rounded" data-wp-debugger-copy="stack-trace">
+                        Copy stack trace
+                    </button>
+                    <textarea id="wp-debugger-stack-trace" style="position:absolute;left:-9999px;" aria-hidden="true">{{stack_trace_text}}</textarea>
+                </div>
                 {{code_snippets}}
             </div>
         </div>

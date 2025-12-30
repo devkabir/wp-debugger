@@ -82,6 +82,9 @@ class Error_Page {
 	 * @return void
 	 */
 	private function render( Throwable $throwable ): void {
+		if ( $this->should_ignore_exception( $throwable ) ) {
+			return;
+		}
 		$layout        = Template::get_layout();
 		$trace         = $throwable->getTrace();
 		$trigger_point = array(
@@ -92,12 +95,38 @@ class Error_Page {
 		$data          = array(
 			'{{exception_message}}' => htmlspecialchars( $throwable->getMessage() ),
 			'{{code_snippets}}'     => $this->generate_code_snippets( $trace ),
+			'{{stack_trace_text}}'  => htmlspecialchars( $this->format_stack_trace_text( $trace ) ),
 			'{{superglobals}}'      => $this->compile_globals(),
 		);
 		$exception     = Template::get_part( 'exception' );
 		$exception     = Template::compile( $data, $exception );
 		$output        = Template::compile( array( '{{content}}' => $exception ), $layout );
 		echo $output;
+	}
+
+	/**
+	 * Determines whether an exception should be ignored by the renderer.
+	 *
+	 * @param Throwable $throwable The exception to check.
+	 * @return bool
+	 */
+	private function should_ignore_exception( Throwable $throwable ): bool {
+		$trace    = $throwable->getMessage();
+		$messages = apply_filters(
+			'wp_debugger_ignore_exception_messages',
+			array(
+				'wp_update_plugins',
+			)
+		);
+		$ignored  = false;
+		foreach ( $messages as $text ) {
+			if ( strpos( $trace, $text ) !== false ) {
+				$ignored = true;
+				break;
+			}
+		}
+
+		return $ignored;
 	}
 
 	/**
@@ -139,6 +168,32 @@ class Error_Page {
 		return $code_snippets;
 	}
 
+	/**
+	 * Formats the stack trace for copy-to-clipboard output.
+	 *
+	 * @param array $trace The exception trace.
+	 * @return string
+	 */
+	private function format_stack_trace_text( array $trace ): string {
+		$formatted = format_stack_trace( $trace );
+		if ( empty( $formatted ) ) {
+			return '';
+		}
+
+		$lines = array();
+		foreach ( $formatted as $location => $frame ) {
+			$function = $frame['function'] ?? 'unknown';
+			$args     = $frame['args'] ?? false;
+			$line     = $location . ' ' . $function;
+			if ( ! empty( $args ) ) {
+				$line .= ' ' . json_encode( $args );
+			}
+			$lines[] = $line;
+		}
+
+		return implode( "\n", $lines );
+	}
+
 	private function dump_args( array $data ) {
 		$template = '';
 		foreach ( $data as $index => $value ) {
@@ -170,7 +225,8 @@ class Error_Page {
 	 */
 	private function compile_globals(): string {
 		$super_globals = array(
-			'$_REQUEST' => $_REQUEST,
+			'$_POST'    => $_POST,
+			'$_GET'     => $_GET,
 			'$_SERVER'  => $_SERVER,
 			'$_FILES'   => $_FILES,
 			'$_COOKIE'  => $_COOKIE,
