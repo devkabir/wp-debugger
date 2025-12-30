@@ -205,12 +205,10 @@ class Error_Page {
 	/**
 	 * Creates a formatted dump of variable data
 	 *
-	 * @param mixed $variable The data to dump
-	 *
 	 * @return string HTML formatted variable dump
 	 */
-	public static function dump( $variable ): string {
-		$data = debugger_format_variable( $variable );
+	public static function dump(): string {
+		$data = debugger_format_variable( func_get_args() );
 
 		return Template::compile(
 			array( '{{content}}' => $data ),

@@ -42,7 +42,7 @@ function format_stack_trace( array $trace ): array {
 			continue;
 		}
 		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
-			'function' => $value['function'],
+			'function' => $value['function'] ?? '',
 			'args'     => isset( $value['args'] ) ? array_filter(
 				$value['args'],
 				function ( $arg ) {
@@ -80,16 +80,14 @@ function init_debugger() {
 /**
  * Outputs a formatted dump of a variable for debugging purposes.
  *
- * @param mixed func_get_args The variable to dump.
- *
  * @return void
  * @throws Exception
  */
 function dump() {
 	if ( \DevKabir\WPDebugger\Plugin::get_instance()->is_json_request() ) {
-		echo debugger_format_variable( func_get_args() );
+		echo debugger_format_variable( ...func_get_args() );
 	} else {
-		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( func_get_args() );
+		$compiled_data = DevKabir\WPDebugger\Error_Page::dump( ...func_get_args() );
 		echo DevKabir\WPDebugger\Template::compile( array( '{{content}}' => $compiled_data ), DevKabir\WPDebugger\Template::get_layout() );
 	}
 }
@@ -103,7 +101,7 @@ function dump() {
  * @throws Exception
  */
 function dd() {
-	dump( func_get_args() );
+	dump( ...func_get_args() );
 	die;
 }
 

@@ -54,7 +54,6 @@ class Template {
 		return self::compile(
 			array(
 				'{{css_url}}'           => self::get_asset( 'css/page.css' ),
-				'{{prism_css_url}}'     => self::get_asset( 'css/prism.css' ),
 				'{{prism_js_url}}'      => self::get_asset( 'js/prism.js' ),
 				'{{copy_trace_js_url}}' => self::get_asset( 'js/copy-stack-trace.js' ),
 			),
