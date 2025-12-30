@@ -34,7 +34,7 @@ define( 'DevKabir\WPDebugger\FILE', __FILE__ );
 | Loading all registered methods.
 |--------------------------------------------------------------------------
 */
-require_once __DIR__ . '/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -42,5 +42,5 @@ require_once __DIR__ . '/autoload.php';
 |--------------------------------------------------------------------------
 */
 if ( ! isset( $_GET['disable_debug'] ) ) {
-	DevKabir\WPDebugger\Plugin::get_instance();
+	\Spatie\Ignition\Ignition::make()->register();
 }

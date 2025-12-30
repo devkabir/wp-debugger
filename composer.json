@@ -1,0 +1,11 @@
+{
+    "name": "devkabir/wp-debugger",
+    "autoload": {
+        "psr-4": {
+            "DevKabir\\Debugger\\": "src/"
+        }
+    },
+    "require": {
+        "spatie/ignition": "^1.15"
+    }
+}
