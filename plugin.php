@@ -42,5 +42,5 @@ require_once __DIR__ . '/vendor/autoload.php';
 |--------------------------------------------------------------------------
 */
 if ( ! isset( $_GET['disable_debug'] ) ) {
-	\Spatie\Ignition\Ignition::make()->register();
+	\DevKabir\Debugger\Ignition::make()->register();
 }
