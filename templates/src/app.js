@@ -7,7 +7,7 @@ import './prism-bundle.js'
 class WPDebuggerApp {
   constructor(data) {
     this.data = data
-    this.app = document.getElementById('app')
+    this.app = document.getElementById('wp-debugger')
   }
 
   render() {
@@ -40,9 +40,7 @@ class WPDebuggerApp {
   renderHeader() {
     return `
       <header class="exception__header">
-        <p class="eyebrow">WP Debugger</p>
         <h1 class="exception__title">${this.escapeHtml(this.data.message)}</h1>
-        <p class="exception__subtitle">A snapshot of what went wrong, with traceable code and the request context.</p>
       </header>
     `
   }
