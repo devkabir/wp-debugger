@@ -1,3 +1,4 @@
-composer.lock
+*.lock
 *.log
 .idea
+node_modules
