@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:disable Squiz.Commenting, WordPress.Security
 
 namespace DevKabir\WPDebugger;
 
@@ -206,33 +206,28 @@ class Error_Page {
 	 */
 	private function enqueue_assets(): void {
 		// Register styles
-		wp_register_style(
+		wp_enqueue_style(
 			'wp-debugger-page',
 			Template::get_asset( 'css/page.css' ),
 			array(),
-			Plugin::get_instance()->version()
+			'1.0.0'
 		);
 
-		wp_register_style(
+		wp_enqueue_style(
 			'wp-debugger-prism',
 			Template::get_asset( 'css/prism.css' ),
 			array(),
-			Plugin::get_instance()->version()
+			'1.0.0'
 		);
 
 		// Register script
-		wp_register_script(
+		wp_enqueue_script(
 			'wp-debugger-app',
 			Template::get_asset( 'js/app.js' ),
 			array(),
-			Plugin::get_instance()->version(),
+			'1.0.0',
 			array( 'in_footer' => false )
 		);
-
-		// Enqueue everything
-		wp_enqueue_style( 'wp-debugger-page' );
-		wp_enqueue_style( 'wp-debugger-prism' );
-		wp_enqueue_script( 'wp-debugger-app' );
 	}
 
 	/**
@@ -338,7 +333,7 @@ class Error_Page {
 			<title>WP Debugger</title>
 			<?php wp_head(); ?>
 		</head>
-		<body class="debugger-body">
+		<body>
 			<div id="app"></div>
 			<?php wp_footer(); ?>
 		</body>
