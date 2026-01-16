@@ -16,10 +16,28 @@ class Error_Page {
 	 * Constructor - Sets up error handling hooks and configuration
 	 */
 	public function __construct() {
+		// Mirror WordPress: respect suppressed errors and catch fatal shutdowns.
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		set_exception_handler( array( $this, 'handle' ) );
+		register_shutdown_function( array( $this, 'shutdown_handler' ) );
 		error_reporting( -1 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 	}
+
+	/**
+	 * Toggle used to prevent re-entrant handling.
+	 *
+	 * @var bool
+	 */
+	private $handling = false;
+
+	private const FATAL_ERRORS = array(
+		E_ERROR,
+		E_PARSE,
+		E_USER_ERROR,
+		E_COMPILE_ERROR,
+		E_CORE_ERROR,
+		E_RECOVERABLE_ERROR,
+	);
 
 	/**
 	 * Converts PHP errors to Exceptions
@@ -36,7 +54,52 @@ class Error_Page {
 	 * @throws \ErrorException The converted error as an Exception.
 	 */
 	public function errors( $errno, $errstr, $errfile, $errline ) {
+		// Skip errors silenced with @ just like core.
+		if ( ! ( error_reporting() & $errno ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+			return false;
+		}
+
+		if ( ! $this->should_handle_error( $errno ) ) {
+			return false;
+		}
+
 		$this->handle( new ErrorException( $errstr, 0, $errno, $errfile, $errline ) );
+
+		return true;
+	}
+
+	/**
+	 * Shutdown handler to catch fatal errors WordPress style.
+	 *
+	 * @return void
+	 */
+	public function shutdown_handler(): void {
+		$last_error = error_get_last();
+
+		if ( null === $last_error || ! $this->should_handle_error( $last_error['type'] ?? 0 ) ) {
+			return;
+		}
+
+		$this->clean_output_buffers();
+		$this->handle(
+			new ErrorException(
+				$last_error['message'] ?? 'Fatal error',
+				0,
+				$last_error['type'] ?? E_ERROR,
+				$last_error['file'] ?? '',
+				$last_error['line'] ?? 0
+			)
+		);
+	}
+
+	/**
+	 * Determine if an error type should be handled.
+	 *
+	 * @param int $type Error type.
+	 * @return bool
+	 */
+	private function should_handle_error( int $type ): bool {
+		return in_array( $type, self::FATAL_ERRORS, true );
 	}
 
 	/**
@@ -46,6 +109,14 @@ class Error_Page {
 	 * @return void
 	 */
 	public function handle( Throwable $throwable ): void {
+		if ( $this->handling ) {
+			return;
+		}
+
+		$this->handling = true;
+		$this->clean_output_buffers();
+		$this->send_http_status();
+
 		if ( Plugin::get_instance()->is_json_request() ) {
 			$this->json_handler( $throwable );
 			error_log( $throwable->getMessage() ); // phpcs:ignore
@@ -55,6 +126,35 @@ class Error_Page {
 
 		die;
 	}
+
+	/**
+	 * Clean any partial output so the error page mirrors core behaviour.
+	 *
+	 * @return void
+	 */
+	private function clean_output_buffers(): void {
+		while ( ob_get_level() ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
+			ob_end_clean(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
+		}
+	}
+
+	/**
+	 * Send a 500 status code where headers permit.
+	 *
+	 * @return void
+	 */
+	private function send_http_status(): void {
+		if ( function_exists( 'status_header' ) ) {
+			status_header( 500 );
+		} elseif ( ! headers_sent() ) {
+			header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
+		}
+
+		if ( function_exists( 'http_response_code' ) ) {
+			http_response_code( 500 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
+		}
+	}
+
 	/**
 	 * Handles exceptions by outputting them in JSON format
 	 *
@@ -63,6 +163,10 @@ class Error_Page {
 	 * @return void
 	 */
 	public function json_handler( Throwable $throwable ): void {
+		if ( ! headers_sent() ) {
+			header( 'Content-Type: application/json; charset=utf-8' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
+		}
+
 		echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions
 			array(
 				'message'  => $throwable->getMessage(),
@@ -82,22 +186,164 @@ class Error_Page {
 	 * @return void
 	 */
 	private function render( Throwable $throwable ): void {
-		$layout        = Template::get_layout();
+		// Register and enqueue assets
+		$this->enqueue_assets();
+
+		// Prepare error data to pass to JavaScript
+		$error_data = $this->prepare_error_data( $throwable );
+
+		// Localize script with error data
+		wp_localize_script( 'wp-debugger-app', 'wpDebuggerData', $error_data );
+
+		// Output minimal HTML that JavaScript will populate
+		$this->output_html();
+	}
+
+	/**
+	 * Register and enqueue WordPress assets
+	 *
+	 * @return void
+	 */
+	private function enqueue_assets(): void {
+		// Register styles
+		wp_register_style(
+			'wp-debugger-page',
+			Template::get_asset( 'css/page.css' ),
+			array(),
+			Plugin::get_instance()->version()
+		);
+
+		wp_register_style(
+			'wp-debugger-prism',
+			Template::get_asset( 'css/prism.css' ),
+			array(),
+			Plugin::get_instance()->version()
+		);
+
+		// Register script
+		wp_register_script(
+			'wp-debugger-app',
+			Template::get_asset( 'js/app.js' ),
+			array(),
+			Plugin::get_instance()->version(),
+			array( 'in_footer' => false )
+		);
+
+		// Enqueue everything
+		wp_enqueue_style( 'wp-debugger-page' );
+		wp_enqueue_style( 'wp-debugger-prism' );
+		wp_enqueue_script( 'wp-debugger-app' );
+	}
+
+	/**
+	 * Prepare error data as array for JavaScript
+	 *
+	 * @param Throwable $throwable The exception to process.
+	 * @return array
+	 */
+	private function prepare_error_data( Throwable $throwable ): array {
 		$trace         = $throwable->getTrace();
 		$trigger_point = array(
 			'file' => $throwable->getFile(),
 			'line' => $throwable->getLine(),
 		);
 		$trace         = array_merge( array( $trigger_point ), $trace );
-		$data          = array(
-			'{{exception_message}}' => htmlspecialchars( $throwable->getMessage() ),
-			'{{code_snippets}}'     => $this->generate_code_snippets( $trace ),
-			'{{superglobals}}'      => $this->compile_globals(),
+
+		return array(
+			'message'      => $throwable->getMessage(),
+			'stackTrace'   => $this->format_stack_trace( $trace ),
+			'superglobals' => $this->format_superglobals(),
 		);
-		$exception     = Template::get_part( 'exception' );
-		$exception     = Template::compile( $data, $exception );
-		$output        = Template::compile( array( '{{content}}' => $exception ), $layout );
-		echo $output;
+	}
+
+	/**
+	 * Format stack trace for JavaScript consumption
+	 *
+	 * @param array $trace The exception trace.
+	 * @return array
+	 */
+	private function format_stack_trace( array $trace ): array {
+		$formatted = array();
+
+		foreach ( $trace as $frame ) {
+			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
+				continue;
+			}
+
+			$file_path    = $frame['file'];
+			$line         = $frame['line'] ?? 0;
+			$file_content = file_get_contents( $file_path ) ?? '';
+			$lines        = explode( "\n", $file_content );
+			$start_line   = max( 0, $line - 5 );
+			$end_line     = min( count( $lines ), $line + 5 );
+			$snippet      = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
+
+			$formatted[] = array(
+				'file'      => $file_path,
+				'line'      => $line,
+				'startLine' => $start_line,
+				'endLine'   => $end_line,
+				'snippet'   => $snippet,
+				'args'      => $this->filter_array_recursive( $frame['args'] ?? array() ),
+			);
+		}
+
+		return $formatted;
+	}
+
+	/**
+	 * Format superglobals for JavaScript consumption
+	 *
+	 * @return array
+	 */
+	private function format_superglobals(): array {
+		$super_globals = array(
+			'$_REQUEST' => $_REQUEST,
+			'$_SERVER'  => $_SERVER,
+			'$_FILES'   => $_FILES,
+			'$_COOKIE'  => $_COOKIE,
+			'$_SESSION' => $_SESSION ?? array(),
+			'headers'   => headers_list(),
+		);
+
+		$formatted = array();
+		foreach ( $super_globals as $name => $value ) {
+			if ( empty( $value ) ) {
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				ksort( $value );
+			}
+			$formatted[ $name ] = $value;
+		}
+
+		return $formatted;
+	}
+
+	/**
+	 * Output minimal HTML shell
+	 *
+	 * @return void
+	 */
+	private function output_html(): void {
+		if ( ! headers_sent() ) {
+			header( 'Content-Type: text/html; charset=utf-8' );
+		}
+		?>
+		<!doctype html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>WP Debugger</title>
+			<?php wp_head(); ?>
+		</head>
+		<body class="debugger-body">
+			<div id="app"></div>
+			<?php wp_footer(); ?>
+		</body>
+		</html>
+		<?php
 	}
 
 	/**
@@ -197,20 +443,6 @@ class Error_Page {
 		}
 
 		return $output;
-	}
-
-	/**
-	 * Handles PHP shutdown and displays last error
-	 *
-	 * @return void
-	 */
-	public function handle_shutdown(): void {
-		if ( empty( error_get_last() ) ) {
-			echo self::dump( debug_backtrace() );
-		} else {
-			echo self::dump( error_get_last() );
-		}
-		die;
 	}
 
 	/**
