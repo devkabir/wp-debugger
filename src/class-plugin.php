@@ -2,16 +2,10 @@
 
 namespace DevKabir\WPDebugger;
 
-use Exception;
-use RuntimeException;
-use WP_Error;
-
 /**
  * Plugin class.
  */
 class Plugin {
-
-
 	/**
 	 * The instance of the plugin.
 	 *
@@ -43,16 +37,6 @@ class Plugin {
 		}
 
 		return self::$instance;
-	}
-
-	/**
-	 * Throws an exception to trigger the error page.
-	 *
-	 * @return void
-	 * @throws Exception
-	 */
-	public function throw_exception(): void {
-		throw new RuntimeException( 'Debugger initialized', 1 );
 	}
 
 	/**

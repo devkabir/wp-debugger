@@ -3,28 +3,19 @@ import { resolve } from 'path'
 import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
-    tailwindcss(),
+    tailwindcss({
+      optimize: true
+    }),
   ],
   build: {
-    outDir: '../assets',
-    emptyOutDir: false,
+    outDir: '../dist',
+    emptyOutDir: true,
+    manifest: 'manifest.json',
     rollupOptions: {
       input: {
         'page': resolve(__dirname, 'src/page/index.js'),
-      },
-      output: {
-        entryFileNames: () => {
-          return 'js/[name].js'
-        },
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.names && assetInfo.names[0]) {
-            const name = assetInfo.names[0]
-            if (name.endsWith('.css')) {
-              return 'css/[name][extname]'
-            }
-          }
-          return '[name][extname]'
-        }
+        'dump': resolve(__dirname, 'src/dump/index.js'),
+        'prism': resolve(__dirname, 'src/prism/index.js')
       }
     }
   }

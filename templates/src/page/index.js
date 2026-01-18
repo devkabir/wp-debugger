@@ -261,7 +261,7 @@ class WPDebuggerApp {
 
   renderArguments(args) {
     const headerHtml = this.templates.render('section-header', { title: 'Arguments' })
-    const variableHtml = this.renderVariableDump(args.join(','))
+    const variableHtml = this.renderVariableDump(args)
     return `<div class="mt-4">${headerHtml}${variableHtml}</div>`
   }
 

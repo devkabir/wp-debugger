@@ -28,16 +28,7 @@ class Http {
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
 		}
-
-		add_action( 'requests-requests.before_request', array( $this, 'start_timer' ), 10, 2 );
-		add_action( 'requests-requests.after_request', array( $this, 'end_timer' ), 10, 2 );
 	}
-	/**
-	 * Timer storage for performance monitoring.
-	 *
-	 * @var array
-	 */
-	private $request_timers = array();
 
 	/**
 	 * Intercepts outgoing HTTP requests and serves mock responses for predefined URLs.
@@ -105,44 +96,6 @@ class Http {
 	}
 
 	/**
-	 * Start timing for HTTP request performance monitoring.
-	 *
-	 * @param string $url Request URL.
-	 * @param array  $headers Request headers.
-	 */
-	public function start_timer( $url, $headers = array() ) {
-		$request_id                          = md5( $url . serialize( $headers ) );
-		$this->request_timers[ $request_id ] = microtime( true );
-	}
-
-	/**
-	 * End timing for HTTP request performance monitoring.
-	 *
-	 * @param string $url Request URL.
-	 * @param array  $headers Request headers.
-	 */
-	public function end_timer( $url, $headers = array() ) {
-		$request_id = time();
-		if ( isset( $this->request_timers[ $request_id ] ) ) {
-			$duration = microtime( true ) - $this->request_timers[ $request_id ];
-			unset( $this->request_timers[ $request_id ] );
-
-			if ( $duration > 2.0 ) {
-				$domain = wp_parse_url( $url, PHP_URL_HOST );
-				$log    = new Log( $domain . '-slow-requests.log' );
-				$log->write(
-					array(
-						'URL'       => $url,
-						'Duration'  => round( $duration, 3 ) . 's',
-						'Timestamp' => current_time( 'mysql' ),
-					),
-					'WARNING'
-				);
-			}
-		}
-	}
-
-	/**
 	 * Logs HTTP API requests and responses to a debug log.
 	 *
 	 * @param array|\WP_Error $response    HTTP response or \WP_Error object.
@@ -182,9 +135,8 @@ class Http {
 			return;
 		}
 
-		$response_body    = wp_remote_retrieve_body( $response );
-		$response_code    = wp_remote_retrieve_response_code( $response );
-		$response_headers = wp_remote_retrieve_headers( $response );
+		$response_body = wp_remote_retrieve_body( $response );
+		$response_code = wp_remote_retrieve_response_code( $response );
 
 		$success_data             = $base_data;
 		$success_data['response'] = array(

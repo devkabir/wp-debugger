@@ -1,0 +1,35 @@
+{
+  "src/dump/index.js": {
+    "file": "assets/dump-FPgjMLpi.js",
+    "name": "dump",
+    "src": "src/dump/index.js",
+    "isEntry": true,
+    "imports": [
+      "src/prism/index.js"
+    ],
+    "css": [
+      "assets/dump-CaooOTyb.css"
+    ]
+  },
+  "src/page/index.js": {
+    "file": "assets/page-Byy4urhC.js",
+    "name": "page",
+    "src": "src/page/index.js",
+    "isEntry": true,
+    "imports": [
+      "src/prism/index.js"
+    ],
+    "css": [
+      "assets/page-BuPw6ha6.css"
+    ]
+  },
+  "src/prism/index.js": {
+    "file": "assets/prism-smQVsIuM.js",
+    "name": "prism",
+    "src": "src/prism/index.js",
+    "isEntry": true,
+    "css": [
+      "assets/prism-BDdBe-QD.css"
+    ]
+  }
+}

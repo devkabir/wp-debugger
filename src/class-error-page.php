@@ -15,383 +15,380 @@ use RuntimeException;
  */
 class Error_Page {
 
-    private const SUPERGLOBAL_ITEM_LIMIT = 200;
-    private const CONTEXT_LINE_WINDOW = 5;
-    private const MAX_RECURSION_DEPTH = 10;
-    /**
-     * Toggle used to prevent re-entrant handling.
-     *
-     * @var bool
-     */
-    private bool $handling = false;
+	private const SUPERGLOBAL_ITEM_LIMIT = 200;
+	private const CONTEXT_LINE_WINDOW    = 5;
+	private const MAX_RECURSION_DEPTH    = 10;
+	/**
+	 * Toggle used to prevent re-entrant handling.
+	 *
+	 * @var bool
+	 */
+	private bool $handling = false;
 
-    /**
-     * Constructor - Sets up error handling hooks and configuration
-     */
-    public function __construct() {
-        if ( $this->should_skip_handling() ) {
-            return;
-        }
+	/**
+	 * Constructor - Sets up error handling hooks and configuration
+	 */
+	public function __construct() {
+		if ( $this->should_skip_handling() ) {
+			return;
+		}
 
-        // Mirror WordPress: respect suppressed errors and catch fatal shutdowns.
-        set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
-        set_exception_handler( array( $this, 'handle' ) );
-        register_shutdown_function( array( $this, 'shutdown_handler' ) );
-        error_reporting( - 1 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
-    }
+		// Mirror WordPress: respect suppressed errors and catch fatal shutdowns.
+		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+		set_exception_handler( array( $this, 'handle' ) );
+		register_shutdown_function( array( $this, 'shutdown_handler' ) );
+		error_reporting( - 1 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+	}
 
-    /**
-     * Converts PHP errors to Exceptions
-     *
-     * This function is the custom error handler for WordPress. It converts PHP
-     * errors into Exceptions, which can then be caught and handled by the
-     * `handle` method.
-     *
-     * @param int $severity The level of the error raised, as an integer.
-     * @param string $message The error message, as a string.
-     * @param string $file The filename that the error was raised in, as a string.
-     * @param int $line The line number the error was raised at, as an integer.
-     */
-    public function errors( int $severity, string $message, string $file, int $line ): bool {
-        // Skip errors silenced with @ or not fatal.
-        if ( ! ( error_reporting() & $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
-            return false;
-        }
+	/**
+	 * Converts PHP errors to Exceptions
+	 *
+	 * This function is the custom error handler for WordPress. It converts PHP
+	 * errors into Exceptions, which can then be caught and handled by the
+	 * `handle` method.
+	 *
+	 * @param int $severity The level of the error raised, as an integer.
+	 * @param string $message The error message, as a string.
+	 * @param string $file The filename that the error was raised in, as a string.
+	 * @param int $line The line number the error was raised at, as an integer.
+	 */
+	public function errors( int $severity, string $message, string $file, int $line ): bool {
+		// Skip errors silenced with @ or not fatal.
+		if ( ! ( error_reporting() & $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+			return false;
+		}
 
-        $this->handle( new ErrorException( $message, 0, $severity, $file, $line ) );
+		$this->handle( new ErrorException( $message, 0, $severity, $file, $line ) );
 
-        return true;
-    }
+		return true;
+	}
 
-    /**
-     * Handles thrown exceptions and errors
-     *
-     * @param Throwable $throwable The exception or error to handle.
-     *
-     * @return void
-     */
-    public function handle( Throwable $throwable ): void {
-        if ( $this->handling ) {
-            return;
-        }
+	/**
+	 * Handles thrown exceptions and errors
+	 *
+	 * @param Throwable $throwable The exception or error to handle.
+	 *
+	 * @return void
+	 */
+	public function handle( Throwable $throwable ): void {
+		if ( $this->handling ) {
+			return;
+		}
 
-        $this->handling = true;
-        $this->clean_output_buffers();
-        $this->send_http_status();
+		$this->handling = true;
+		$this->clean_output_buffers();
+		$this->send_http_status();
 
-        if ( Plugin::get_instance()->is_json_request() ) {
-            $this->json_handler( $throwable );
+		if ( Plugin::get_instance()->is_json_request() ) {
+			$this->json_handler( $throwable );
             error_log( $throwable->getMessage() ); // phpcs:ignore
-        } else {
-            $this->render( $throwable );
-        }
+		} else {
+			$this->render( $throwable );
+		}
 
-        die;
-    }
+		die;
+	}
 
-    /**
-     * Clean any partial output so the error page mirrors core behaviour.
-     *
-     * @return void
-     */
-    private function clean_output_buffers(): void {
-        while ( ob_get_level() ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
-            ob_end_clean(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
-        }
-    }
+	/**
+	 * Clean any partial output so the error page mirrors core behaviour.
+	 *
+	 * @return void
+	 */
+	private function clean_output_buffers(): void {
+		while ( ob_get_level() ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
+			ob_end_clean(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
+		}
+	}
 
-    /**
-     * Send a 500 status code where headers permit.
-     *
-     * @return void
-     */
-    private function send_http_status(): void {
-        if ( ! headers_sent() ) {
-            function_exists( 'status_header' ) ? status_header( 500 ) : header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror, WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
-        }
-    }
+	/**
+	 * Send a 500 status code where headers permit.
+	 *
+	 * @return void
+	 */
+	private function send_http_status(): void {
+		if ( ! headers_sent() ) {
+			function_exists( 'status_header' ) ? status_header( 500 ) : header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror, WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
+		}
+	}
 
-    /**
-     * Determine if error handling should be skipped for this request.
-     *
-     * Allows opting out via a cookie (set from the UI) or query parameter.
-     *
-     * @return bool
-     */
-    private function should_skip_handling(): bool {
-        if ( isset( $_GET['skip_wp_debugger'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-            return true;
-        }
+	/**
+	 * Determine if error handling should be skipped for this request.
+	 *
+	 * Allows opting out via a cookie (set from the UI) or query parameter.
+	 *
+	 * @return bool
+	 */
+	private function should_skip_handling(): bool {
+		return ! empty( $_COOKIE['wp_debugger_ignore'] );
+	}
 
-        return ! empty( $_COOKIE['wp_debugger_ignore'] );
-    }
+	/**
+	 * Handles exceptions by outputting them in JSON format
+	 *
+	 * @param Throwable $throwable The exception to handle.
+	 *
+	 * @return void
+	 */
+	public function json_handler( Throwable $throwable ): void {
+		! headers_sent() && header( 'Content-Type: application/json; charset=utf-8' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
 
-    /**
-     * Handles exceptions by outputting them in JSON format
-     *
-     * @param Throwable $throwable The exception to handle.
-     *
-     * @return void
-     */
-    public function json_handler( Throwable $throwable ): void {
-        ! headers_sent() && header( 'Content-Type: application/json; charset=utf-8' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
+		echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions
+			array(
+				'message'  => $throwable->getMessage(),
+				'file'     => $throwable->getFile(),
+				'line'     => $throwable->getLine(),
+				'trace'    => format_stack_trace( $throwable->getTrace() ),
+				'previous' => $throwable->getPrevious(),
+			),
+			JSON_PRETTY_PRINT
+		);
+	}
 
-        echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions
-            array(
-                'message'  => $throwable->getMessage(),
-                'file'     => $throwable->getFile(),
-                'line'     => $throwable->getLine(),
-                'trace'    => format_stack_trace( $throwable->getTrace() ),
-                'previous' => $throwable->getPrevious(),
-            ), JSON_PRETTY_PRINT );
-    }
+	/**
+	 * Renders the exception in HTML format using a template
+	 *
+	 * @param Throwable $throwable The exception to render.
+	 *
+	 * @return void
+	 */
+	private function render( Throwable $throwable ): void {
+		! headers_sent() && header( 'Content-Type: text/html; charset=utf-8' );
+		Template::render( 'page', $this->prepare_error_data( $throwable ) );
+	}
 
-    /**
-     * Renders the exception in HTML format using a template
-     *
-     * @param Throwable $throwable The exception to render.
-     *
-     * @return void
-     */
-    private function render( Throwable $throwable ): void {
-        // Prepare error data to pass to JavaScript
-        ! headers_sent() && header( 'Content-Type: text/html; charset=utf-8' );
-        ?>
-        <!doctype html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php echo $throwable->getMessage(); ?></title>
-            <link rel="stylesheet" href="<?php echo Template::get_asset( 'css/page.css' ); ?>">
-        </head>
-        <body>
-        <div id="wp-debugger"></div>
-        <script src="<?php echo Template::get_asset( 'js/page.js' ); ?>"></script>
-        <script>
-            const wpDebuggerData = <?php echo wp_json_encode( $this->prepare_error_data( $throwable ) ); ?>
-        </script>
-        </body>
-        </html>
-        <?php
-    }
+	/**
+	 * Prepare error data as array for JavaScript
+	 *
+	 * @param Throwable $throwable The exception to process.
+	 *
+	 * @return array
+	 */
+	private function prepare_error_data( Throwable $throwable ): array {
+		$trace        = $throwable->getTrace();
+		$trigger_file = $throwable->getFile();
+		$trigger_line = $throwable->getLine();
 
-    /**
-     * Prepare error data as array for JavaScript
-     *
-     * @param Throwable $throwable The exception to process.
-     *
-     * @return array
-     */
-    private function prepare_error_data( Throwable $throwable ): array {
-        return array(
-            'message'      => $throwable->getMessage(),
-            'stackTrace'   => $this->format_stack_trace( $throwable->getTrace() ),
-            'superglobals' => $this->format_superglobals(),
-        );
-    }
+		// Only prepend trigger point if it's not already the first frame
+		$first_frame = $trace[0] ?? null;
+		if ( ! $first_frame || $first_frame['file'] !== $trigger_file || $first_frame['line'] !== $trigger_line ) {
+			$trigger_point = array(
+				'file' => $trigger_file,
+				'line' => $trigger_line,
+			);
+			$trace         = array_merge( array( $trigger_point ), $trace );
+		} else {
+			// If first frame is the trigger point, remove its args since they're error handler params
+			unset( $trace[0]['args'] );
+		}
 
-    /**
-     * Format stack trace for JavaScript consumption
-     *
-     * @param array $trace The exception trace.
-     *
-     * @return array
-     */
-    private function format_stack_trace( array $trace ): array {
-        $formatted = array();
+		return array(
+			'message'      => $throwable->getMessage(),
+			'stackTrace'   => $this->format_stack_trace( $trace ),
+			'superglobals' => $this->format_superglobals(),
+		);
+	}
 
-        foreach ( $trace as $frame ) {
-            if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
-                continue;
-            }
+	/**
+	 * Format stack trace for JavaScript consumption
+	 *
+	 * @param array $trace The exception trace.
+	 *
+	 * @return array
+	 */
+	private function format_stack_trace( array $trace ): array {
+		$formatted = array();
 
-            $file_path = $frame['file'];
+		foreach ( $trace as $frame ) {
+			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
+				continue;
+			}
 
-            // Skip files outside WordPress installation.
-            if ( ABSPATH && 0 !== strpos( $file_path, ABSPATH ) ) {
-                continue;
-            }
+			$file_path = $frame['file'];
 
-            $line = $frame['line'] ?? 0;
-            $args = $frame['args'] ?? array();
+			// Skip files outside WordPress installation.
+			if ( ABSPATH && 0 !== strpos( $file_path, ABSPATH ) ) {
+				continue;
+			}
 
-            $snippet_data = $this->get_file_snippet( $file_path, $line );
+			$line = $frame['line'] ?? 0;
+			$args = $frame['args'] ?? array();
 
-            $formatted[] = array(
-                'file'      => $this->normalize_path( $file_path ),
-                'filePath'  => $file_path,
-                'line'      => $line,
-                'startLine' => $snippet_data['startLine'],
-                'endLine'   => $snippet_data['endLine'],
-                'snippet'   => $snippet_data['snippet'],
-                'args'      => empty( $args ) ? array() : $this->process_array_value( $args ),
-            );
-        }
+			$snippet_data = $this->get_file_snippet( $file_path, $line );
 
-        return $formatted;
-    }
+			$formatted[] = array(
+				'file'      => $this->normalize_path( $file_path ),
+				'filePath'  => $file_path,
+				'line'      => $line,
+				'startLine' => $snippet_data['startLine'],
+				'endLine'   => $snippet_data['endLine'],
+				'snippet'   => $snippet_data['snippet'],
+				'args'      => empty( $args ) ? array() : $this->process_array_value( $args ),
+			);
+		}
 
-    /**
-     * Pull only the lines needed for a code snippet instead of loading the full file.
-     *
-     * @param string $file_path Path to the PHP file.
-     * @param int $line Target line number.
-     *
-     * @return array{startLine:int,endLine:int,snippet:string}
-     */
-    private function get_file_snippet( string $file_path, int $line ): array {
-        $start_line = max( 0, $line - self::CONTEXT_LINE_WINDOW );
-        $end_line   = $line + self::CONTEXT_LINE_WINDOW;
+		return $formatted;
+	}
 
-        try {
-            $file = new SplFileObject( $file_path, 'r' );
-            $file->seek( $start_line );
+	/**
+	 * Pull only the lines needed for a code snippet instead of loading the full file.
+	 *
+	 * @param string $file_path Path to the PHP file.
+	 * @param int $line Target line number.
+	 *
+	 * @return array{startLine:int,endLine:int,snippet:string}
+	 */
+	private function get_file_snippet( string $file_path, int $line ): array {
+		$start_line = max( 0, $line - self::CONTEXT_LINE_WINDOW );
+		$end_line   = $line + self::CONTEXT_LINE_WINDOW;
 
-            $snippet      = '';
-            $current_line = $start_line;
+		try {
+			$file = new SplFileObject( $file_path, 'r' );
+			$file->seek( $start_line );
 
-            while ( ! $file->eof() && $current_line <= $end_line ) {
-                $snippet .= rtrim( (string) $file->current(), "\n" ) . "\n";
-                $file->next();
-                ++ $current_line;
-            }
+			$snippet      = '';
+			$current_line = $start_line;
 
-            // Unset file handle to free memory immediately.
-            unset( $file );
+			while ( ! $file->eof() && $current_line <= $end_line ) {
+				$snippet .= rtrim( (string) $file->current(), "\n" ) . "\n";
+				$file->next();
+				++$current_line;
+			}
 
-            return array(
-                'startLine' => $start_line,
-                'endLine'   => $current_line - 1,
-                'snippet'   => rtrim( $snippet, "\n" ),
-            );
-        } catch ( RuntimeException $e ) {
-            return array(
-                'startLine' => $start_line,
-                'endLine'   => $start_line,
-                'snippet'   => '',
-            );
-        }
-    }
+			// Unset file handle to free memory immediately.
+			unset( $file );
 
-    /**
-     * Normalize file paths - convert to relative paths if within ABSPATH.
-     *
-     * @param string $path The path to normalize.
-     *
-     * @return string Normalized path.
-     */
-    private function normalize_path( string $path ): string {
-        // Only process if it looks like a file path and is within ABSPATH.
-        if ( ABSPATH && 0 === strpos( $path, ABSPATH ) ) {
-            return substr( $path, strlen( ABSPATH ) );
-        }
+			return array(
+				'startLine' => $start_line,
+				'endLine'   => $current_line - 1,
+				'snippet'   => rtrim( $snippet, "\n" ),
+			);
+		} catch ( RuntimeException $e ) {
+			return array(
+				'startLine' => $start_line,
+				'endLine'   => $start_line,
+				'snippet'   => '',
+			);
+		}
+	}
 
-        return $path;
-    }
+	/**
+	 * Normalize file paths - convert to relative paths if within ABSPATH.
+	 *
+	 * @param string $path The path to normalize.
+	 *
+	 * @return string Normalized path.
+	 */
+	private function normalize_path( string $path ): string {
+		// Only process if it looks like a file path and is within ABSPATH.
+		if ( ABSPATH && 0 === strpos( $path, ABSPATH ) ) {
+			return substr( $path, strlen( ABSPATH ) );
+		}
 
-    /**
-     * Process array values recursively - convert objects and filter/trim arrays.
-     *
-     * @param mixed $data Input data.
-     * @param int $limit Maximum items to keep per level.
-     * @param int $depth Current recursion depth.
-     *
-     * @return mixed Processed data.
-     */
-    private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
-        // Prevent excessive recursion depth.
-        if ( $depth >= self::MAX_RECURSION_DEPTH ) {
-            return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
-        }
+		return $path;
+	}
 
-        if ( is_object( $data ) ) {
-            return get_class( $data );
-        }
+	/**
+	 * Process array values recursively - convert objects and filter/trim arrays.
+	 *
+	 * @param mixed $data Input data.
+	 * @param int $limit Maximum items to keep per level.
+	 * @param int $depth Current recursion depth.
+	 *
+	 * @return mixed Processed data.
+	 */
+	private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
+		// Prevent excessive recursion depth.
+		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
+			return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
+		}
 
-        if ( is_string( $data ) ) {
-            // Truncate very long strings to save memory.
-            return strlen( $data ) > 1000 ? substr( $data, 0, 1000 ) . '... [truncated]' : $this->normalize_path( $data );
-        }
+		if ( is_object( $data ) ) {
+			return get_class( $data );
+		}
 
-        if ( ! is_array( $data ) ) {
-            return $data;
-        }
+		if ( is_string( $data ) ) {
+			// Truncate very long strings to save memory.
+			return strlen( $data ) > 1000 ? substr( $data, 0, 1000 ) . '... [truncated]' : $this->normalize_path( $data );
+		}
 
-        $count = count( $data );
+		if ( ! is_array( $data ) ) {
+			return $data;
+		}
 
-        // Trim if limit is set.
-        if ( $limit > 0 && $count > $limit ) {
-            $data                = array_slice( $data, 0, $limit, true );
-            $data['__truncated'] = sprintf( 'trimmed to first %d of %d entries', $limit, $count );
-        }
+		$count = count( $data );
 
-        // Process nested values.
-        foreach ( $data as $key => $value ) {
-            $processed = $this->process_array_value( $value, $limit, $depth + 1 );
+		// Trim if limit is set.
+		if ( $limit > 0 && $count > $limit ) {
+			$data                = array_slice( $data, 0, $limit, true );
+			$data['__truncated'] = sprintf( 'trimmed to first %d of %d entries', $limit, $count );
+		}
 
-            if ( 0 === $limit && is_array( $processed ) && empty( $processed ) ) {
-                unset( $data[ $key ] );
-            } else {
-                $data[ $key ] = $processed;
-            }
-        }
+		// Process nested values.
+		foreach ( $data as $key => $value ) {
+			$processed = $this->process_array_value( $value, $limit, $depth + 1 );
 
-        return 0 === $limit ? array_filter( $data ) : $data;
-    }
+			if ( 0 === $limit && is_array( $processed ) && empty( $processed ) ) {
+				unset( $data[ $key ] );
+			} else {
+				$data[ $key ] = $processed;
+			}
+		}
 
-    /**
-     * Format superglobals for JavaScript consumption
-     *
-     * @return array
-     */
-    private function format_superglobals(): array {
-        $formatted = array();
+		return 0 === $limit ? array_filter( $data ) : $data;
+	}
 
-        $superglobals = array(
-            '$_REQUEST' => $_REQUEST,
-            '$_SERVER'  => $_SERVER,
-            '$_FILES'   => $_FILES,
-            '$_COOKIE'  => $_COOKIE,
-            '$_SESSION' => $_SESSION ?? array(),
-        );
+	/**
+	 * Format superglobals for JavaScript consumption
+	 *
+	 * @return array
+	 */
+	private function format_superglobals(): array {
+		$formatted = array();
 
-        foreach ( $superglobals as $name => $value ) {
-            if ( ! empty( $value ) ) {
-                $formatted[ $name ] = $this->trim_array( $value );
-            }
-        }
+		$superglobals = array(
+			'$_REQUEST' => $_REQUEST,
+			'$_SERVER'  => $_SERVER,
+			'$_FILES'   => $_FILES,
+			'$_COOKIE'  => $_COOKIE,
+			'$_SESSION' => $_SESSION ?? array(),
+		);
 
-        // Free memory.
-        unset( $superglobals );
+		foreach ( $superglobals as $name => $value ) {
+			if ( ! empty( $value ) ) {
+				$formatted[ $name ] = $this->trim_array( $value );
+			}
+		}
 
-        return $formatted;
-    }
+		// Free memory.
+		unset( $superglobals );
 
-    /**
-     * Limit array size recursively to avoid duplicating very large superglobals.
-     *
-     * @param array $data Input array.
-     *
-     * @return array
-     */
-    private function trim_array( array $data ): array {
-        return $this->process_array_value( $data, self::SUPERGLOBAL_ITEM_LIMIT );
-    }
+		return $formatted;
+	}
 
-    /**
-     * Shutdown handler to catch fatal errors WordPress style.
-     *
-     * @return void
-     */
-    public function shutdown_handler(): void {
-        $last_error = error_get_last();
+	/**
+	 * Limit array size recursively to avoid duplicating very large superglobals.
+	 *
+	 * @param array $data Input array.
+	 *
+	 * @return array
+	 */
+	private function trim_array( array $data ): array {
+		return $this->process_array_value( $data, self::SUPERGLOBAL_ITEM_LIMIT );
+	}
 
-        if ( null === $last_error ) {
-            return;
-        }
+	/**
+	 * Shutdown handler to catch fatal errors WordPress style.
+	 *
+	 * @return void
+	 */
+	public function shutdown_handler(): void {
+		$last_error = error_get_last();
 
-        $this->clean_output_buffers();
-        $this->handle( new ErrorException( $last_error['message'] ?? 'Fatal error', 0, $last_error['type'] ?? E_ERROR, $last_error['file'] ?? '', $last_error['line'] ?? 0 ) );
-    }
+		if ( null === $last_error ) {
+			return;
+		}
+
+		$this->clean_output_buffers();
+		$this->handle( new ErrorException( $last_error['message'] ?? 'Fatal error', 0, $last_error['type'] ?? E_ERROR, $last_error['file'] ?? '', $last_error['line'] ?? 0 ) );
+	}
 }
