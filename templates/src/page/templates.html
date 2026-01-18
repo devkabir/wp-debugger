@@ -14,7 +14,25 @@
             <div class="mb-6">
                 <!-- Stack Trace Section -->
                 <section class="exception__stack">
-                    <h2 class="text-xl font-semibold">Stack Trace</h2>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h2 class="text-xl font-semibold">Stack Trace</h2>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                class="px-3 py-2 text-sm font-medium text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 shadow-sm"
+                                data-action="copy-stack"
+                            >
+                                Copy for AI
+                            </button>
+                            <button
+                                type="button"
+                                class="px-3 py-2 text-sm font-medium text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 shadow-sm"
+                                data-action="dismiss-error"
+                            >
+                                Ignore error
+                            </button>
+                        </div>
+                    </div>
                     <div data-slot="stack-trace"></div>
                 </section>
 

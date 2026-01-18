@@ -104,6 +104,16 @@ class WPDebuggerApp {
     if (stackSlot) stackSlot.innerHTML = this.renderStackTrace()
     if (superglobalsSlot) superglobalsSlot.innerHTML = this.renderSuperglobals()
 
+    const copyButton = template.querySelector('[data-action="copy-stack"]')
+    if (copyButton) {
+      copyButton.addEventListener('click', () => this.copyStackTrace(copyButton))
+    }
+
+    const dismissButton = template.querySelector('[data-action="dismiss-error"]')
+    if (dismissButton) {
+      dismissButton.addEventListener('click', () => this.dismissError())
+    }
+
     this.app.innerHTML = ''
     this.app.appendChild(template)
 
@@ -123,6 +133,73 @@ class WPDebuggerApp {
     return this.data.stackTrace.map((frame, index) => {
       return this.renderCodeFrame(frame, index)
     }).join('')
+  }
+
+  async copyStackTrace(button) {
+    const text = this.buildStackTraceText()
+    if (!text) return
+
+    const originalLabel = button?.textContent
+    const setLabel = label => {
+      if (button) button.textContent = label
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        this.copyWithFallback(text)
+      }
+
+      setLabel('Copied!')
+    } catch (error) {
+      console.error('WP Debugger: Failed to copy stack trace', error)
+      setLabel('Copy failed')
+    } finally {
+      if (button) {
+        setTimeout(() => {
+          setLabel(originalLabel ?? 'Copy for AI')
+        }, 1500)
+      }
+    }
+  }
+
+  copyWithFallback(text) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'absolute'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
+
+  buildStackTraceText() {
+    if (!this.data?.stackTrace || this.data.stackTrace.length === 0) {
+      return ''
+    }
+
+    const frames = this.data.stackTrace.map((frame, index) => {
+      const parts = [`${index + 1}) ${frame.file}:${frame.line}`]
+
+      const argsForCopy = this.prepareArgsForCopy(frame.args)
+      if (argsForCopy) {
+        parts.push('  Args:')
+        parts.push(this.indentBlock(argsForCopy, 4))
+      }
+
+      if (frame.snippet) {
+        parts.push('  Code:')
+        const snippet = frame.snippet.replace(/\t/g, '  ').trimEnd()
+        parts.push(this.indentBlock(snippet, 4))
+      }
+
+      return parts.join('\n')
+    }).join('\n\n')
+
+    return `Error: ${this.data.message}\n\nStack Trace:\n${frames}`
   }
 
   renderCodeFrame(frame, index) {
@@ -288,6 +365,46 @@ class WPDebuggerApp {
     }
 
     return String(value)
+  }
+
+  indentBlock(text, spaces = 2) {
+    const pad = ' '.repeat(spaces)
+    return text.split('\n').map(line => `${pad}${line}`).join('\n')
+  }
+
+  prepareArgsForCopy(args) {
+    if (!args || Object.keys(args).length === 0) {
+      return ''
+    }
+
+    if (Array.isArray(args) && this.looksLikeErrorHandlerArgs(args)) {
+      return 'omitted (PHP error handler args)'
+    }
+
+    return this.formatVariable(args)
+  }
+
+  looksLikeErrorHandlerArgs(args) {
+    if (!Array.isArray(args)) return false
+    if (args.length < 4) return false
+
+    const [errno, message, file, line] = args
+    return typeof errno === 'number'
+      && typeof message === 'string'
+      && typeof file === 'string'
+      && (typeof line === 'number' || typeof line === 'string')
+  }
+
+  dismissError() {
+    if (!this.app) return
+    this.app.innerHTML = ''
+    this.app.style.display = 'none'
+    this.rememberIgnorePreference()
+  }
+
+  rememberIgnorePreference() {
+    const maxAgeSeconds = 60 * 60 * 24 // 1 day
+    document.cookie = `wp_debugger_ignore=1; path=/; max-age=${maxAgeSeconds}`
   }
 }
 

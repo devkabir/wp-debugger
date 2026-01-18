@@ -23,12 +23,16 @@ class Error_Page {
      *
      * @var bool
      */
-    private $handling = false;
+    private bool $handling = false;
 
     /**
      * Constructor - Sets up error handling hooks and configuration
      */
     public function __construct() {
+        if ( $this->should_skip_handling() ) {
+            return;
+        }
+
         // Mirror WordPress: respect suppressed errors and catch fatal shutdowns.
         set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
         set_exception_handler( array( $this, 'handle' ) );
@@ -43,20 +47,18 @@ class Error_Page {
      * errors into Exceptions, which can then be caught and handled by the
      * `handle` method.
      *
-     * @param int $errno The level of the error raised, as an integer.
-     * @param string $errstr The error message, as a string.
-     * @param string $errfile The filename that the error was raised in, as a string.
-     * @param int $errline The line number the error was raised at, as an integer.
-     *
-     * @throws ErrorException The converted error as an Exception.
+     * @param int $severity The level of the error raised, as an integer.
+     * @param string $message The error message, as a string.
+     * @param string $file The filename that the error was raised in, as a string.
+     * @param int $line The line number the error was raised at, as an integer.
      */
-    public function errors( int $errno, string $errstr, string $errfile, int $errline ): bool {
+    public function errors( int $severity, string $message, string $file, int $line ): bool {
         // Skip errors silenced with @ or not fatal.
-        if ( ! ( error_reporting() & $errno ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+        if ( ! ( error_reporting() & $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
             return false;
         }
 
-        $this->handle( new ErrorException( $errstr, 0, $errno, $errfile, $errline ) );
+        $this->handle( new ErrorException( $message, 0, $severity, $file, $line ) );
 
         return true;
     }
@@ -110,6 +112,21 @@ class Error_Page {
     }
 
     /**
+     * Determine if error handling should be skipped for this request.
+     *
+     * Allows opting out via a cookie (set from the UI) or query parameter.
+     *
+     * @return bool
+     */
+    private function should_skip_handling(): bool {
+        if ( isset( $_GET['skip_wp_debugger'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return true;
+        }
+
+        return ! empty( $_COOKIE['wp_debugger_ignore'] );
+    }
+
+    /**
      * Handles exceptions by outputting them in JSON format
      *
      * @param Throwable $throwable The exception to handle.
@@ -145,7 +162,7 @@ class Error_Page {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>WP Debugger</title>
+            <title><?php echo $throwable->getMessage(); ?></title>
             <link rel="stylesheet" href="<?php echo Template::get_asset( 'css/page.css' ); ?>">
         </head>
         <body>
@@ -208,7 +225,7 @@ class Error_Page {
                 'startLine' => $snippet_data['startLine'],
                 'endLine'   => $snippet_data['endLine'],
                 'snippet'   => $snippet_data['snippet'],
-                'args'      => empty( $args ) ? array() : $this->process_array_value( $args, 0, 0 ),
+                'args'      => empty( $args ) ? array() : $this->process_array_value( $args ),
             );
         }
 
