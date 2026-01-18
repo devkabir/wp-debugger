@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>WP Debugger Dev</title>
+    </head>
+    <body>
+        <div id="wp-debugger"></div>
+        <script src="./src/page" type="module"></script>
+        <script id="wp-debugger-app-js-extra">
+            var wpDebuggerData = {
+                message: "Error Processing Request",
+                stackTrace: [
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-content/mu-plugins/devkabir-mu-plugin.php",
+                        line: 86,
+                        startLine: 81,
+                        endLine: 89,
+                        snippet:
+                            " */\nadd_action(\n\t'wp_loaded',\n\tfunction (): void {\n\t\tthrow new Exception( 'Error Processing Request', 1 );\n\t}\n);\n",
+                        args: [],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-includes/class-wp-hook.php",
+                        line: 341,
+                        startLine: 336,
+                        endLine: 346,
+                        snippet:
+                            "\t\t\t\t// Avoid the array_slice() if possible.\n\t\t\t\tif ( 0 === $the_['accepted_args'] ) {\n\t\t\t\t\t$value = call_user_func( $the_['function'] );\n\t\t\t\t} elseif ( $the_['accepted_args'] \u003E= $num_args ) {\n\t\t\t\t\t$value = call_user_func_array( $the_['function'], $args );\n\t\t\t\t} else {\n\t\t\t\t\t$value = call_user_func_array( $the_['function'], array_slice( $args, 0, $the_['accepted_args'] ) );\n\t\t\t\t}\n\t\t\t}\n\t\t} while ( false !== next( $this-\u003Eiterations[ $nesting_level ] ) );",
+                        args: [],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-includes/class-wp-hook.php",
+                        line: 365,
+                        startLine: 360,
+                        endLine: 370,
+                        snippet:
+                            "\t * @param array $args Parameters to pass to the callback functions.\n\t */\n\tpublic function do_action( $args ) {\n\t\t$this-\u003Edoing_action = true;\n\t\t$this-\u003Eapply_filters( '', $args );\n\n\t\t// If there are recursive calls to the current action, we haven't finished it until we get to the last one.\n\t\tif ( ! $this-\u003Enesting_level ) {\n\t\t\t$this-\u003Edoing_action = false;\n\t\t}",
+                        args: [],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-includes/plugin.php",
+                        line: 522,
+                        startLine: 517,
+                        endLine: 527,
+                        snippet:
+                            "\t\t// Backward compatibility for PHP4-style passing of `array( &$this )` as action `$arg`.\n\t\t$arg[0] = $arg[0][0];\n\t}\n\n\t$wp_filter[ $hook_name ]-\u003Edo_action( $arg );\n\n\tarray_pop( $wp_current_filter );\n}\n\n/**",
+                        args: [],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-settings.php",
+                        line: 764,
+                        startLine: 759,
+                        endLine: 765,
+                        snippet:
+                            " * @link https://developer.wordpress.org/plugins/javascript/ajax\n *\n * @since 3.0.0\n */\ndo_action( 'wp_loaded' );\n",
+                        args: ["wp_loaded"],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-config.php",
+                        line: 106,
+                        startLine: 101,
+                        endLine: 107,
+                        snippet:
+                            "\tdefine( 'ABSPATH', __DIR__ . '/' );\n}\n\n/** Sets up WordPress vars and included files. */\nrequire_once ABSPATH . 'wp-settings.php';\n",
+                        args: ["/Users/devkabir/sites/def-590/wp-settings.php"],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-load.php",
+                        line: 50,
+                        startLine: 45,
+                        endLine: 55,
+                        snippet:
+                            " */\nif ( file_exists( ABSPATH . 'wp-config.php' ) ) {\n\n\t/** The config file resides in ABSPATH */\n\trequire_once ABSPATH . 'wp-config.php';\n\n} elseif ( @file_exists( dirname( ABSPATH ) . '/wp-config.php' ) && ! @file_exists( dirname( ABSPATH ) . '/wp-settings.php' ) ) {\n\n\t/** The config file resides one level above ABSPATH but is not part of another installation */\n\trequire_once dirname( ABSPATH ) . '/wp-config.php';",
+                        args: ["/Users/devkabir/sites/def-590/wp-config.php"],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/wp-blog-header.php",
+                        line: 13,
+                        startLine: 8,
+                        endLine: 18,
+                        snippet:
+                            "\n\t$wp_did_header = true;\n\n\t// Load the WordPress library.\n\trequire_once __DIR__ . '/wp-load.php';\n\n\t// Set up the WordPress query.\n\twp();\n\n\t// Load the theme template.",
+                        args: ["/Users/devkabir/sites/def-590/wp-load.php"],
+                    },
+                    {
+                        file: "/Users/devkabir/sites/def-590/index.php",
+                        line: 17,
+                        startLine: 12,
+                        endLine: 18,
+                        snippet:
+                            " */\ndefine( 'WP_USE_THEMES', true );\n\n/** Loads the WordPress Environment and Template */\nrequire __DIR__ . '/wp-blog-header.php';\n",
+                        args: [
+                            "/Users/devkabir/sites/def-590/wp-blog-header.php",
+                        ],
+                    },
+                    {
+                        file: "/Users/devkabir/.composer/vendor/laravel/valet/server.php",
+                        line: 110,
+                        startLine: 105,
+                        endLine: 111,
+                        snippet:
+                            "}\n\nchdir(dirname($frontControllerPath));\n\nrequire $frontControllerPath;\n",
+                        args: ["/Users/devkabir/sites/def-590/index.php"],
+                    },
+                ],
+                superglobals: {
+                    $_SERVER: {
+                        CONTENT_LENGTH: "",
+                        CONTENT_TYPE: "",
+                        DOCUMENT_ROOT: "/Users/devkabir/sites/def-590",
+                        DOCUMENT_URI:
+                            "/Users/devkabir/.composer/vendor/laravel/valet/server.php",
+                        FCGI_ROLE: "RESPONDER",
+                        GATEWAY_INTERFACE: "CGI/1.1",
+                        HOME: "/Users/devkabir",
+                        HTTPS: "on",
+                        HTTP_ACCEPT:
+                            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                        HTTP_ACCEPT_ENCODING: "gzip, deflate, br, zstd",
+                        HTTP_ACCEPT_LANGUAGE: "en-US,en;q=0.9,bn;q=0.8",
+                        HTTP_CACHE_CONTROL: "no-cache",
+                        HTTP_CF_CONNECTING_IP: "194.242.57.10",
+                        HTTP_CLIENT_IP: "194.242.57.10",
+                        HTTP_COOKIE:
+                            "tk_ai=ViT6tYpSd7DuinuKUXXq8P6y; __stripe_mid=3df59f3b-e1c7-4514-985e-cb2382f30c08c3f67a; wp-settings-1=unfold%3D1%26mfold%3Do; wp-settings-time-1=1768577479; wordpress_logged_in_1e14bce207a82421742d30c7637dfd9c=admin%7C1768895693%7CRo4nznguthBmevt6EwuGl0Gu00lwdX8UdPAG6LlGiZV%7Cd192058dbe72c1332e311067e15eb4f962af54a2037947e157038d18377b5ade",
+                        HTTP_DNT: "1",
+                        HTTP_HOST: "def-590.test",
+                        HTTP_PRAGMA: "no-cache",
+                        HTTP_PRIORITY: "u=0, i",
+                        HTTP_SEC_CH_UA:
+                            '\\"Not(A:Brand\\";v=\\"8\\", \\"Chromium\\";v=\\"144\\", \\"Google Chrome\\";v=\\"144\\"',
+                        HTTP_SEC_CH_UA_MOBILE: "?0",
+                        HTTP_SEC_CH_UA_PLATFORM: '\\"macOS\\"',
+                        HTTP_SEC_FETCH_DEST: "document",
+                        HTTP_SEC_FETCH_MODE: "navigate",
+                        HTTP_SEC_FETCH_SITE: "none",
+                        HTTP_SEC_FETCH_USER: "?1",
+                        HTTP_UPGRADE_INSECURE_REQUESTS: "1",
+                        HTTP_USER_AGENT:
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
+                        HTTP_X_FORWARDED_FOR:
+                            "194.242.57.10, 8.8.8.8, 80.12.34.56",
+                        LC_ALL: "C",
+                        PATH_INFO: "",
+                        PGGSSENCMODE: "disable",
+                        PHP_SELF: "/",
+                        QUERY_STRING: "",
+                        REDIRECT_STATUS: "200",
+                        REMOTE_ADDR: "194.242.57.10",
+                        REMOTE_PORT: "59712",
+                        REQUEST_METHOD: "GET",
+                        REQUEST_TIME: 1768725858,
+                        REQUEST_TIME_FLOAT: 1768725858.921034,
+                        REQUEST_URI: "/",
+                        SCRIPT_FILENAME:
+                            "/Users/devkabir/sites/def-590/index.php",
+                        SCRIPT_NAME: "/index.php",
+                        SERVER_ADDR: "127.0.0.1",
+                        SERVER_NAME: "def-590.test",
+                        SERVER_PORT: "443",
+                        SERVER_PROTOCOL: "HTTP/2.0",
+                        SERVER_SOFTWARE: "nginx/1.29.3",
+                        USER: "devkabir",
+                    },
+                    $_COOKIE: {
+                        __stripe_mid:
+                            "3df59f3b-e1c7-4514-985e-cb2382f30c08c3f67a",
+                        tk_ai: "ViT6tYpSd7DuinuKUXXq8P6y",
+                        wordpress_logged_in_1e14bce207a82421742d30c7637dfd9c:
+                            "admin|1768895693|Ro4nznguthBmevt6EwuGl0Gu00lwdX8UdPAG6LlGiZV|d192058dbe72c1332e311067e15eb4f962af54a2037947e157038d18377b5ade",
+                        "wp-settings-1": "unfold=1&mfold=o",
+                        "wp-settings-time-1": "1768577479",
+                    },
+                    headers: ["X-Powered-By: PHP/8.0.30"],
+                },
+            };
+            //# sourceURL=wp-debugger-app-js-extra
+        </script>
+    </body>
+</html>

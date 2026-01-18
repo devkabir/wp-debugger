@@ -1,0 +1,67 @@
+<!-- Main App Shell -->
+<template id="app-template">
+    <div
+        class="p-4 bg-gray-200 text-gray-800 absolute top-0 right-0 z-wp w-full mx-auto"
+    >
+        <section class="bg-white shadow-lg rounded-lg p-8 w-full">
+            <header class="my-6 space-y-4">
+                <h1
+                    class="bg-red-50 border-l-4 border-red-400 text-red-700 p-4 rounded"
+                    data-content="message"
+                ></h1>
+            </header>
+
+            <div class="mb-6">
+                <!-- Stack Trace Section -->
+                <section class="exception__stack">
+                    <h2 class="text-xl font-semibold">Stack Trace</h2>
+                    <div data-slot="stack-trace"></div>
+                </section>
+
+                <!-- Superglobals Section -->
+                <aside class="exception__context">
+                    <h2 class="section-title">Superglobals</h2>
+                    <div class="accordion" data-slot="superglobals"></div>
+                </aside>
+            </div>
+        </section>
+    </div>
+</template>
+
+<!-- Reusable Details/Summary Pattern (used for: stack frames, variables, arguments) -->
+<template id="details-item">
+    <details class="py-2 px-4" open>
+        <summary
+            class="cursor-pointer text-md font-medium p-2 rounded hover:bg-gray-100"
+            data-content="header"
+        ></summary>
+        <div class="details-item__body" data-slot="content"></div>
+    </details>
+</template>
+
+<!-- Code Block Pattern (used for: PHP code, variable dumps) -->
+<template id="code-block">
+    <pre class="line-highlight"><code data-content="code"></code></pre>
+</template>
+
+<!-- Link Pattern (used for: file paths) -->
+<template id="file-link">
+    <a
+        class="text-indigo-600 hover:underline"
+        data-href="link"
+        data-content="text"
+        title="Open in editor"
+    ></a>
+</template>
+
+<!-- Empty State Pattern (reusable for any empty state) -->
+<template id="empty-state">
+    <p class="text-muted" data-content="message"></p>
+</template>
+
+<!-- Section Header Pattern (optional, for consistent section titles) -->
+<template id="section-header">
+    <div class="section-header">
+        <h3 class="section-header__title" data-content="title"></h3>
+    </div>
+</template>

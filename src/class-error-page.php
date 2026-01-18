@@ -209,22 +209,15 @@ class Error_Page {
 			'wp-debugger-page',
 			Template::get_asset( 'css/page.css' ),
 			array(),
-			'1.0.0'
-		);
-
-		wp_enqueue_style(
-			'wp-debugger-prism',
-			Template::get_asset( 'css/prism.css' ),
-			array(),
-			'1.0.0'
+			time()
 		);
 
 		// Register script
 		wp_enqueue_script(
 			'wp-debugger-app',
-			Template::get_asset( 'js/app.js' ),
+			Template::get_asset( 'js/page.js' ),
 			array(),
-			'1.0.0',
+			time(),
 			array( 'in_footer' => false )
 		);
 	}
@@ -321,7 +314,7 @@ class Error_Page {
 	 */
 	private function print_assets(): void {
 		if ( function_exists( 'wp_print_styles' ) ) {
-			wp_print_styles( array( 'wp-debugger-page', 'wp-debugger-prism' ) );
+			wp_print_styles( array( 'wp-debugger-page' ) );
 		}
 
 		if ( function_exists( 'wp_print_scripts' ) ) {

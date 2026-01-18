@@ -1,0 +1,5 @@
+/* Import core Prism theme */
+@import "../../node_modules/prismjs/themes/prism-okaidia.min.css";
+
+/* Import plugins */
+@import "../../node_modules/prismjs/plugins/line-highlight/prism-line-highlight.min.css";

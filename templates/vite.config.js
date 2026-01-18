@@ -10,9 +10,7 @@ export default defineConfig({
     emptyOutDir: false,
     rollupOptions: {
       input: {
-        'page': resolve(__dirname, 'src/page/styles.css'),
-        'prism': resolve(__dirname, 'src/prism-styles.css'),
-        'app': resolve(__dirname, 'src/app.js'),
+        'page': resolve(__dirname, 'src/page/index.js'),
       },
       output: {
         entryFileNames: () => {
