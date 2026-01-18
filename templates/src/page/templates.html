@@ -19,9 +19,9 @@
                 </section>
 
                 <!-- Superglobals Section -->
-                <aside class="exception__context">
-                    <h2 class="section-title">Superglobals</h2>
-                    <div class="accordion" data-slot="superglobals"></div>
+                <aside class="my-6 space-y-4 w-full">
+                    <h2 class="text-xl font-semibold">Superglobals</h2>
+                    <div data-slot="superglobals"></div>
                 </aside>
             </div>
         </section>
@@ -30,7 +30,7 @@
 
 <!-- Reusable Details/Summary Pattern (used for: stack frames, variables, arguments) -->
 <template id="details-item">
-    <details class="py-2 px-4" open>
+    <details open>
         <summary
             class="cursor-pointer text-md font-medium p-2 rounded hover:bg-gray-100"
             data-content="header"
@@ -41,7 +41,7 @@
 
 <!-- Code Block Pattern (used for: PHP code, variable dumps) -->
 <template id="code-block">
-    <pre class="line-highlight"><code data-content="code"></code></pre>
+    <pre><code data-content="code"></code></pre>
 </template>
 
 <!-- Link Pattern (used for: file paths) -->
@@ -62,6 +62,6 @@
 <!-- Section Header Pattern (optional, for consistent section titles) -->
 <template id="section-header">
     <div class="section-header">
-        <h3 class="section-header__title" data-content="title"></h3>
+        <h3 class="text-xl font-semibold" data-content="title"></h3>
     </div>
 </template>

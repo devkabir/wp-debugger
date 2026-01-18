@@ -19,6 +19,13 @@ class Error_Page {
 	 */
 	private $handling = false;
 
+	/**
+	 * Cached ABSPATH value to avoid repeated lookups.
+	 *
+	 * @var string
+	 */
+	private $abspath = '';
+
 	private const FATAL_ERRORS = array(
 		E_ERROR,
 		E_PARSE,
@@ -27,10 +34,18 @@ class Error_Page {
 		E_CORE_ERROR,
 		E_RECOVERABLE_ERROR,
 	);
+
+	private const SUPERGLOBAL_ITEM_LIMIT = 200;
+	private const CONTEXT_LINE_WINDOW    = 5;
+	private const MAX_STACK_TRACE_DEPTH  = 50;
+	private const MAX_RECURSION_DEPTH    = 10;
 	/**
 	 * Constructor - Sets up error handling hooks and configuration
 	 */
 	public function __construct() {
+		// Cache ABSPATH once to avoid repeated lookups.
+		$this->abspath = defined( 'ABSPATH' ) ? ABSPATH : '';
+
 		// Mirror WordPress: respect suppressed errors and catch fatal shutdowns.
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		set_exception_handler( array( $this, 'handle' ) );
@@ -53,17 +68,12 @@ class Error_Page {
 	 * @throws \ErrorException The converted error as an Exception.
 	 */
 	public function errors( $errno, $errstr, $errfile, $errline ) {
-		// Skip errors silenced with @ just like core.
-		if ( ! ( error_reporting() & $errno ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
-			return false;
-		}
-
-		if ( ! $this->should_handle_error( $errno ) ) {
+		// Skip errors silenced with @ or not fatal.
+		if ( ! ( error_reporting() & $errno ) || ! $this->should_handle_error( $errno ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 			return false;
 		}
 
 		$this->handle( new ErrorException( $errstr, 0, $errno, $errfile, $errline ) );
-
 		return true;
 	}
 
@@ -143,14 +153,8 @@ class Error_Page {
 	 * @return void
 	 */
 	private function send_http_status(): void {
-		if ( function_exists( 'status_header' ) ) {
-			status_header( 500 );
-		} elseif ( ! headers_sent() ) {
-			header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
-		}
-
-		if ( function_exists( 'http_response_code' ) ) {
-			http_response_code( 500 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
+		if ( ! headers_sent() ) {
+			function_exists( 'status_header' ) ? status_header( 500 ) : header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror, WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
 		}
 	}
 
@@ -162,9 +166,7 @@ class Error_Page {
 	 * @return void
 	 */
 	public function json_handler( Throwable $throwable ): void {
-		if ( ! headers_sent() ) {
-			header( 'Content-Type: application/json; charset=utf-8' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
-		}
+		! headers_sent() && header( 'Content-Type: application/json; charset=utf-8' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror
 
 		echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions
 			array(
@@ -229,12 +231,17 @@ class Error_Page {
 	 * @return array
 	 */
 	private function prepare_error_data( Throwable $throwable ): array {
-		$trace         = $throwable->getTrace();
-		$trigger_point = array(
-			'file' => $throwable->getFile(),
-			'line' => $throwable->getLine(),
+		// Limit stack trace depth to prevent memory issues.
+		$trace = array_slice( $throwable->getTrace(), 0, self::MAX_STACK_TRACE_DEPTH );
+
+		// Prepend trigger point.
+		array_unshift(
+			$trace,
+			array(
+				'file' => $throwable->getFile(),
+				'line' => $throwable->getLine(),
+			)
 		);
-		$trace         = array_merge( array( $trigger_point ), $trace );
 
 		return array(
 			'message'      => $throwable->getMessage(),
@@ -257,25 +264,72 @@ class Error_Page {
 				continue;
 			}
 
-			$file_path    = $frame['file'];
-			$line         = $frame['line'] ?? 0;
-			$file_content = file_get_contents( $file_path ) ?? '';
-			$lines        = explode( "\n", $file_content );
-			$start_line   = max( 0, $line - 5 );
-			$end_line     = min( count( $lines ), $line + 5 );
-			$snippet      = implode( "\n", array_slice( $lines, $start_line, $end_line - $start_line ) );
+			$file_path = $frame['file'];
+
+			// Skip files outside WordPress installation.
+			if ( $this->abspath && 0 !== strpos( $file_path, $this->abspath ) ) {
+				continue;
+			}
+
+			$line = $frame['line'] ?? 0;
+			$args = $frame['args'] ?? array();
+
+			$snippet_data = $this->get_file_snippet( $file_path, $line );
 
 			$formatted[] = array(
-				'file'      => $file_path,
+				'file'      => $this->normalize_path( $file_path ),
+				'filePath'  => $file_path,
 				'line'      => $line,
-				'startLine' => $start_line,
-				'endLine'   => $end_line,
-				'snippet'   => $snippet,
-				'args'      => $this->filter_array_recursive( $frame['args'] ?? array() ),
+				'startLine' => $snippet_data['startLine'],
+				'endLine'   => $snippet_data['endLine'],
+				'snippet'   => $snippet_data['snippet'],
+				'args'      => empty( $args ) ? array() : $this->process_array_value( $args, 0, 0 ),
 			);
 		}
 
 		return $formatted;
+	}
+
+	/**
+	 * Pull only the lines needed for a code snippet instead of loading the full file.
+	 *
+	 * @param string $file_path Path to the PHP file.
+	 * @param int    $line      Target line number.
+	 *
+	 * @return array{startLine:int,endLine:int,snippet:string}
+	 */
+	private function get_file_snippet( string $file_path, int $line ): array {
+		$start_line = max( 0, $line - self::CONTEXT_LINE_WINDOW );
+		$end_line   = $line + self::CONTEXT_LINE_WINDOW;
+
+		try {
+			$file = new \SplFileObject( $file_path, 'r' );
+			$file->seek( $start_line );
+
+			$snippet      = '';
+			$current_line = $start_line;
+
+			while ( ! $file->eof() && $current_line <= $end_line ) {
+				$snippet .= rtrim( (string) $file->current(), "\n" ) . "\n";
+				$file->next();
+				++$current_line;
+			}
+
+			// Unset file handle to free memory immediately.
+			unset( $file );
+
+			return array(
+				'startLine' => $start_line,
+				'endLine'   => $current_line - 1,
+				'snippet'   => rtrim( $snippet, "\n" ),
+			);
+		} catch ( \RuntimeException $e ) {
+			return array(
+				'startLine' => $start_line,
+				'endLine'   => $start_line,
+				'snippet'   => '',
+			);
+		}
 	}
 
 	/**
@@ -284,25 +338,24 @@ class Error_Page {
 	 * @return array
 	 */
 	private function format_superglobals(): array {
-		$super_globals = array(
+		$formatted = array();
+
+		$superglobals = array(
 			'$_REQUEST' => $_REQUEST,
 			'$_SERVER'  => $_SERVER,
 			'$_FILES'   => $_FILES,
 			'$_COOKIE'  => $_COOKIE,
 			'$_SESSION' => $_SESSION ?? array(),
-			'headers'   => headers_list(),
 		);
 
-		$formatted = array();
-		foreach ( $super_globals as $name => $value ) {
-			if ( empty( $value ) ) {
-				continue;
+		foreach ( $superglobals as $name => $value ) {
+			if ( ! empty( $value ) ) {
+				$formatted[ $name ] = $this->trim_array( $value, self::SUPERGLOBAL_ITEM_LIMIT );
 			}
-			if ( is_array( $value ) ) {
-				ksort( $value );
-			}
-			$formatted[ $name ] = $value;
 		}
+
+		// Free memory.
+		unset( $superglobals );
 
 		return $formatted;
 	}
@@ -313,13 +366,8 @@ class Error_Page {
 	 * @return void
 	 */
 	private function print_assets(): void {
-		if ( function_exists( 'wp_print_styles' ) ) {
-			wp_print_styles( array( 'wp-debugger-page' ) );
-		}
-
-		if ( function_exists( 'wp_print_scripts' ) ) {
-			wp_print_scripts( array( 'wp-debugger-app' ) );
-		}
+		function_exists( 'wp_print_styles' ) && wp_print_styles( array( 'wp-debugger-page' ) );
+		function_exists( 'wp_print_scripts' ) && wp_print_scripts( array( 'wp-debugger-app' ) );
 	}
 
 	/**
@@ -328,9 +376,7 @@ class Error_Page {
 	 * @return void
 	 */
 	private function output_html(): void {
-		if ( ! headers_sent() ) {
-			header( 'Content-Type: text/html; charset=utf-8' );
-		}
+		! headers_sent() && header( 'Content-Type: text/html; charset=utf-8' );
 		?>
 		<!doctype html>
 		<html lang="en">
@@ -348,40 +394,79 @@ class Error_Page {
 	}
 
 	/**
-	 * Creates a formatted dump of variable data
+	 * Process array values recursively - convert objects and filter/trim arrays.
 	 *
-	 * @param mixed $variable The data to dump
+	 * @param mixed $data  Input data.
+	 * @param int   $limit Maximum items to keep per level.
+	 * @param int   $depth Current recursion depth.
 	 *
-	 * @return string HTML formatted variable dump
+	 * @return mixed Processed data.
 	 */
-	public static function dump( $variable ): string {
-		$data = debugger_format_variable( $variable );
+	private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
+		// Prevent excessive recursion depth.
+		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
+			return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
+		}
 
-		return Template::compile(
-			array( '{{content}}' => $data ),
-			Template::get_part( 'dump' )
-		);
+		if ( is_object( $data ) ) {
+			return get_class( $data );
+		}
+
+		if ( is_string( $data ) ) {
+			// Truncate very long strings to save memory.
+			return strlen( $data ) > 1000 ? substr( $data, 0, 1000 ) . '... [truncated]' : $this->normalize_path( $data );
+		}
+
+		if ( ! is_array( $data ) ) {
+			return $data;
+		}
+
+		$count = count( $data );
+
+		// Trim if limit is set.
+		if ( $limit > 0 && $count > $limit ) {
+			$data                = array_slice( $data, 0, $limit, true );
+			$data['__truncated'] = sprintf( 'trimmed to first %d of %d entries', $limit, $count );
+		}
+
+		// Process nested values.
+		foreach ( $data as $key => $value ) {
+			$processed = $this->process_array_value( $value, $limit, $depth + 1 );
+
+			if ( 0 === $limit && is_array( $processed ) && empty( $processed ) ) {
+				unset( $data[ $key ] );
+			} else {
+				$data[ $key ] = $processed;
+			}
+		}
+
+		return 0 === $limit ? array_filter( $data ) : $data;
 	}
 
 	/**
-	 * Recursively filters an array to remove empty values.
+	 * Normalize file paths - convert to relative paths if within ABSPATH.
 	 *
-	 * @param array $data The array to filter.
-	 *
-	 * @return array The filtered array.
+	 * @param string $path The path to normalize.
+	 * @return string Normalized path.
 	 */
-	private function filter_array_recursive( array $data ): array {
-		$filtered_data = array_filter( $data );
-		foreach ( $filtered_data as $key => &$value ) {
-			if ( is_object( $value ) ) {
-				$filtered_data[ $key ] = get_class( $value );
-			} elseif ( is_array( $value ) ) {
-				$value = $this->filter_array_recursive( $value );
-				if ( empty( $value ) ) {
-					unset( $filtered_data[ $key ] );
-				}
-			}
+	private function normalize_path( string $path ): string {
+		// Only process if it looks like a file path and is within ABSPATH.
+		if ( $this->abspath && 0 === strpos( $path, $this->abspath ) ) {
+			return substr( $path, strlen( $this->abspath ) );
 		}
-		return $filtered_data;
+
+		return $path;
+	}
+
+	/**
+	 * Limit array size recursively to avoid duplicating very large superglobals.
+	 *
+	 * @param array $data  Input array.
+	 * @param int   $limit Maximum items to keep per level.
+	 *
+	 * @return array
+	 */
+	private function trim_array( array $data, int $limit ): array {
+		return $this->process_array_value( $data, $limit );
 	}
 }

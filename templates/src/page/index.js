@@ -136,7 +136,7 @@ class WPDebuggerApp {
     }
 
     // Build header with file link and line number
-    const editorLink = `vscode://file/${frame.file}:${frame.line}`
+    const editorLink = `vscode://file/${frame.filePath}:${frame.line}`
     const fileLink = this.templates.render('file-link', { link: editorLink, text: frame.file })
     const headerHtml = `${fileLink} <span class="code-frame__line">Line ${frame.line}</span>`
 
@@ -184,7 +184,7 @@ class WPDebuggerApp {
 
   renderArguments(args) {
     const headerHtml = this.templates.render('section-header', { title: 'Arguments' })
-    const variableHtml = this.renderVariableDump(args)
+    const variableHtml = this.renderVariableDump(args.join(','))
     return `<div class="mt-4">${headerHtml}${variableHtml}</div>`
   }
 
@@ -222,7 +222,29 @@ class WPDebuggerApp {
 
   renderVariableDump(variable) {
     const formatted = this.formatVariable(variable)
-    return this.templates.render('code-block', { code: formatted })
+    return this.renderCodeBlock({ code: formatted, language: 'json' })
+  }
+
+  renderCodeBlock({ code, language = 'php', line, lineOffset }) {
+    const template = this.templates.get('code-block')
+    if (!template) return ''
+
+    const preEl = template.querySelector('pre')
+    const codeEl = template.querySelector('code')
+
+    if (preEl) {
+      if (typeof line === 'number') preEl.setAttribute('data-line', line)
+      if (typeof lineOffset === 'number') preEl.setAttribute('data-line-offset', lineOffset)
+    }
+
+    if (codeEl) {
+      codeEl.className = `language-${language}`
+      codeEl.textContent = code
+    }
+
+    const div = document.createElement('div')
+    div.appendChild(template)
+    return div.innerHTML
   }
 
   formatVariable(value, indent = 0) {

@@ -29,7 +29,6 @@ class Plugin {
 	public function __construct() {
 		new Http();
 		new Error_Page();
-		// new Debug_Bar();
 	}
 
 	/**
