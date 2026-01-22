@@ -75,6 +75,19 @@ class Error_Page {
 			return;
 		}
 
+		// Check if this trigger point should be ignored
+		if ( Ignored_Triggers::should_ignore( $throwable->getFile(), $throwable->getLine() ) ) {
+			error_log( // phpcs:ignore
+				sprintf(
+					'[WP Debugger] Ignored error at %s:%d - %s',
+					$throwable->getFile(),
+					$throwable->getLine(),
+					$throwable->getMessage()
+				)
+			);
+			return;
+		}
+
 		$this->handling = true;
 		$this->clean_output_buffers();
 		$this->send_http_status();
@@ -185,6 +198,10 @@ class Error_Page {
 			'message'      => $throwable->getMessage(),
 			'stackTrace'   => $this->format_stack_trace( $trace ),
 			'superglobals' => $this->format_superglobals(),
+			'triggerPoint' => array(
+				'file' => $trigger_file,
+				'line' => $trigger_line,
+			),
 		);
 	}
 

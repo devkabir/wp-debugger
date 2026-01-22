@@ -1,4 +1,3 @@
-// Import Prism for syntax highlighting
 import '../prism'
 import './styles.css'
 import templatesHtml from './templates.html?raw'
@@ -33,19 +32,16 @@ class TemplateLoader {
   bind(template, data) {
     if (!template) return template
 
-    // Bind text content
     Object.entries(data).forEach(([key, value]) => {
       const el = template.querySelector(`[data-content="${key}"]`)
       if (el) el.textContent = value
     })
 
-    // Bind href attributes
     Object.entries(data).forEach(([key, value]) => {
       const el = template.querySelector(`[data-href="${key}"]`)
       if (el) el.href = value
     })
 
-    // Bind custom attributes
     if (data.attrs) {
       Object.entries(data.attrs).forEach(([selector, attrs]) => {
         const el = template.querySelector(selector)
@@ -94,10 +90,8 @@ class WPDebuggerApp {
     const template = this.templates.get('app-template')
     if (!template) return
 
-    // Bind main message
     this.templates.bind(template, { message: this.data.message })
 
-    // Fill slots
     const stackSlot = template.querySelector('[data-slot="stack-trace"]')
     const superglobalsSlot = template.querySelector('[data-slot="superglobals"]')
 
@@ -117,7 +111,6 @@ class WPDebuggerApp {
     this.app.innerHTML = ''
     this.app.appendChild(template)
 
-    // Highlight code after rendering
     requestAnimationFrame(() => {
       if (window.Prism) {
         Prism.highlightAll()
@@ -212,7 +205,6 @@ class WPDebuggerApp {
       details.classList.add('code-frame')
     }
 
-    // Build header with file link and line number
     const editorLink = `vscode://file/${frame.filePath}:${frame.line}`
     const fileLink = this.templates.render('file-link', { link: editorLink, text: frame.file })
     const headerHtml = `${fileLink} <span class="code-frame__line">Line ${frame.line}</span>`
@@ -220,10 +212,8 @@ class WPDebuggerApp {
     const headerEl = template.querySelector('[data-content="header"]')
     if (headerEl) headerEl.innerHTML = headerHtml
 
-    // Build body with code block and optional arguments
     const bodySlot = template.querySelector('[data-slot="content"]')
     if (bodySlot) {
-      // Add code block
       const codeTemplate = this.templates.get('code-block')
       if (codeTemplate) {
         const preEl = codeTemplate.querySelector('pre')
@@ -242,7 +232,6 @@ class WPDebuggerApp {
         bodySlot.appendChild(codeTemplate)
       }
 
-      // Add arguments if present
       const hasArgs = frame.args && Object.keys(frame.args).length > 0
       if (hasArgs) {
         const argsHtml = this.renderArguments(frame.args)
@@ -395,20 +384,56 @@ class WPDebuggerApp {
       && (typeof line === 'number' || typeof line === 'string')
   }
 
-  dismissError() {
+  async dismissError() {
     if (!this.app) return
+
+    const triggerPoint = this.data?.triggerPoint
+    if (triggerPoint?.file && triggerPoint?.line) {
+      try {
+        await this.ignoreTriggerPoint(triggerPoint.file, triggerPoint.line)
+      } catch (error) {
+        console.error('WP Debugger: Failed to ignore trigger point', error)
+      }
+    }
+
     this.app.innerHTML = ''
     this.app.style.display = 'none'
-    this.rememberIgnorePreference()
   }
 
-  rememberIgnorePreference() {
-    const maxAgeSeconds = 60 * 60 * 24 // 1 day
-    document.cookie = `wp_debugger_ignore=1; path=/; max-age=${maxAgeSeconds}`
+  async ignoreTriggerPoint(file, line) {
+    const formData = new FormData()
+    formData.append('action', 'wp_debugger_ignore_trigger')
+    formData.append('file', file)
+    formData.append('line', line)
+
+    const response = await fetch(this.getAjaxUrl(), {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to ignore trigger: ${response.status}`)
+    }
+
+    const data = await response.json()
+    if (!data.success) {
+      throw new Error(data.data?.message || 'Unknown error')
+    }
+
+    return data
+  }
+
+  getAjaxUrl() {
+    if (typeof ajaxurl !== 'undefined') {
+      return ajaxurl
+    }
+
+    const wpAdminUrl = window.location.origin + '/wp-admin/admin-ajax.php'
+    return wpAdminUrl
   }
 }
 
-// Initialize when DOM and data are ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp)
 } else {
