@@ -183,7 +183,10 @@ class Error_Page {
 
 		// Only prepend trigger point if it's not already the first frame
 		$first_frame = $trace[0] ?? null;
-		if ( ! $first_frame || $first_frame['file'] !== $trigger_file || $first_frame['line'] !== $trigger_line ) {
+		$first_file  = $first_frame['file'] ?? null;
+		$first_line  = $first_frame['line'] ?? null;
+
+		if ( ! $first_frame || $first_file !== $trigger_file || $first_line !== $trigger_line ) {
 			$trigger_point = array(
 				'file' => $trigger_file,
 				'line' => $trigger_line,
