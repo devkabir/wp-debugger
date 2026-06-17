@@ -1,6 +1,6 @@
 {
   "src/dump/index.js": {
-    "file": "assets/dump-FPgjMLpi.js",
+    "file": "assets/dump-axXZAkLP.js",
     "name": "dump",
     "src": "src/dump/index.js",
     "isEntry": true,
@@ -12,7 +12,7 @@
     ]
   },
   "src/page/index.js": {
-    "file": "assets/page-DrWrU-Vn.js",
+    "file": "assets/page-BVhk5I3h.js",
     "name": "page",
     "src": "src/page/index.js",
     "isEntry": true,
@@ -20,7 +20,7 @@
       "src/prism/index.js"
     ],
     "css": [
-      "assets/page-CPkcjoU-.css"
+      "assets/page-BK1AKBH3.css"
     ]
   },
   "src/prism/index.js": {
