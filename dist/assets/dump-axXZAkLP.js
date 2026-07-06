@@ -1,1 +1,0 @@
-import"./prism-smQVsIuM.js";document.addEventListener("DOMContentLoaded",function(){const t=document.getElementById("dump-content");window.wpDebuggerData&&(t.textContent=JSON.stringify(window.wpDebuggerData,null,2),Prism.highlightElement(t))});

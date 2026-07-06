@@ -106,22 +106,41 @@ class Template {
 	 * @throws \RuntimeException If template file doesn't exist
 	 */
 	public static function render( string $template, array $data = array() ): void {
-		$template_path = plugin_dir_path( FILE ) . "templates/{$template}.html";
-		if ( ! file_exists( $template_path ) ) {
-			throw new \RuntimeException( "Template {$template}.html not found" );
+		$template_path_php  = plugin_dir_path( FILE ) . "templates/{$template}.php";
+		$template_path_html = plugin_dir_path( FILE ) . "templates/{$template}.html";
+
+		if ( file_exists( $template_path_php ) ) {
+			// Extract variables so they are accessible inside the PHP template
+			extract( $data ); // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+			include $template_path_php;
+			return;
 		}
 
-		$assets = self::get_entry_assets( $template );
+		if ( ! file_exists( $template_path_html ) ) {
+			throw new \RuntimeException( "Template {$template} not found as PHP or HTML" );
+		}
+
+		try {
+			$assets = self::get_entry_assets( $template );
+		} catch ( \RuntimeException $e ) {
+			// Fallback if manifest is missing (e.g. during development or direct use)
+			$assets = array(
+				'js'  => '',
+				'css' => array(),
+			);
+		}
 
 		// Output HTML with injected assets and data
-		$html = file_get_contents( $template_path );
+		$html = file_get_contents( $template_path_html );
 
 		// Inject CSS in head
 		$css_links = '';
-		foreach ( $assets['css'] as $css_url ) {
-			$css_links .= sprintf( '<link rel="stylesheet" href="%s" />', esc_url( $css_url ) ) . "\n        ";
+		if ( ! empty( $assets['css'] ) ) {
+			foreach ( $assets['css'] as $css_url ) {
+				$css_links .= sprintf( '<link rel="stylesheet" href="%s" />', esc_url( $css_url ) ) . "\n        ";
+			}
+			$html = str_replace( '</head>', "        {$css_links}</head>", $html );
 		}
-		$html = str_replace( '</head>', "        {$css_links}</head>", $html );
 
 		// Inject data script
 		$data_json   = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
@@ -130,11 +149,21 @@ class Template {
 			esc_attr( $template ),
 			$data_json
 		);
-		$html        = str_replace(
-			sprintf( '<script id="wp-debugger-%s-data">', $template ),
-			$data_script . "\n        " . sprintf( '<script type="module" src="%s"></script>', esc_url( $assets['js'] ) ) . "\n        " . sprintf( '<!--<script id="wp-debugger-%s-data">', $template ),
-			$html
-		);
+
+		if ( ! empty( $assets['js'] ) ) {
+			$html = str_replace(
+				sprintf( '<script id="wp-debugger-%s-data">', $template ),
+				$data_script . "\n        " . sprintf( '<script type="module" src="%s"></script>', esc_url( $assets['js'] ) ) . "\n        " . sprintf( '<!--<script id="wp-debugger-%s-data">', $template ),
+				$html
+			);
+		} else {
+			// If no JS asset from manifest, just replace the tag with the data script
+			$html = str_replace(
+				sprintf( '<script id="wp-debugger-%s-data">', $template ),
+				$data_script,
+				$html
+			);
+		}
 
 		echo $html;
 	}

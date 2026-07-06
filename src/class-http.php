@@ -112,14 +112,17 @@ class Http {
 		$domain = wp_parse_url( $url, PHP_URL_HOST ) ?? 'unknown';
 
 		$sanitized_body    = $parsed_args['body'];
-		$sanitized_headers = $parsed_args['headers'];
+		$sanitized_headers = $parsed_args['headers'] ?? array();
 
 		$base_data = array(
 			'URL'          => $url,
 			'method'       => $parsed_args['method'] ?? 'GET',
 			'timeout'      => $parsed_args['timeout'] ?? 5,
 			'request_data' => array(
-				'body' => $sanitized_body,
+				'headers' => array(
+					'Authorization' => $sanitized_headers['Authorization'] ?? null,
+				),
+				'body'    => $sanitized_body,
 			),
 		);
 

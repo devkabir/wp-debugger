@@ -199,6 +199,7 @@ class Error_Page {
 
 		return array(
 			'message'      => $throwable->getMessage(),
+			'type'         => $this->get_error_type( $throwable ),
 			'stackTrace'   => $this->format_stack_trace( $trace ),
 			'superglobals' => $this->format_superglobals(),
 			'triggerPoint' => array(
@@ -207,6 +208,46 @@ class Error_Page {
 			),
 		);
 	}
+
+	/**
+	 * Get the human-readable error type/severity name
+	 *
+	 * @param Throwable $throwable The throwable object.
+	 * @return string Error type name
+	 */
+	private function get_error_type( \Throwable $throwable ): string {
+		if ( $throwable instanceof \ErrorException ) {
+			$severity = $throwable->getSeverity();
+			switch ( $severity ) {
+				case E_ERROR:
+				case E_CORE_ERROR:
+				case E_COMPILE_ERROR:
+				case E_USER_ERROR:
+					return 'Fatal Error';
+				case E_WARNING:
+				case E_CORE_WARNING:
+				case E_COMPILE_WARNING:
+				case E_USER_WARNING:
+					return 'Warning';
+				case E_NOTICE:
+				case E_USER_NOTICE:
+					return 'Notice';
+				case E_DEPRECATED:
+				case E_USER_DEPRECATED:
+					return 'Deprecated';
+				case E_STRICT:
+					return 'Strict Notice';
+				case E_RECOVERABLE_ERROR:
+					return 'Recoverable Error';
+				default:
+					return 'Error';
+			}
+		}
+
+		$parts = explode( '\\', get_class( $throwable ) );
+		return end( $parts );
+	}
+
 
 	/**
 	 * Format stack trace for JavaScript consumption
@@ -242,6 +283,9 @@ class Error_Page {
 				'startLine' => $snippet_data['startLine'],
 				'endLine'   => $snippet_data['endLine'],
 				'snippet'   => $snippet_data['snippet'],
+				'class'     => $frame['class'] ?? '',
+				'type'      => $frame['type'] ?? '',
+				'function'  => $frame['function'] ?? '',
 				'args'      => empty( $args ) ? array() : $this->process_array_value( $args ),
 			);
 		}
@@ -258,12 +302,12 @@ class Error_Page {
 	 * @return array{startLine:int,endLine:int,snippet:string}
 	 */
 	private function get_file_snippet( string $file_path, int $line ): array {
-		$start_line = max( 0, $line - self::CONTEXT_LINE_WINDOW );
+		$start_line = max( 1, $line - self::CONTEXT_LINE_WINDOW );
 		$end_line   = $line + self::CONTEXT_LINE_WINDOW;
 
 		try {
 			$file = new SplFileObject( $file_path, 'r' );
-			$file->seek( $start_line );
+			$file->seek( $start_line - 1 );
 
 			$snippet      = '';
 			$current_line = $start_line;
