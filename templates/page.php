@@ -22,6 +22,22 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 		return strlen( $joined ) > 30 ? substr( $joined, 0, 27 ) . '...' : $joined;
 	}
 }
+
+if ( ! function_exists( 'get_display_path' ) ) {
+	function get_display_path( string $path ): string {
+		$home = rtrim( (string) getenv( 'HOME' ), '/' );
+
+		if ( '' !== $home && $path === $home ) {
+			return '~';
+		}
+
+		if ( '' !== $home && 0 === strpos( $path, $home . '/' ) ) {
+			return '~' . substr( $path, strlen( $home ) );
+		}
+
+		return $path;
+	}
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -259,7 +275,8 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			border-radius: 4px;
 			display: inline-flex;
 			align-items: center;
-			justify-content: center
+			justify-content: center;
+			text-decoration: none
 		}
 
 		.btn-copy-path:hover {
@@ -297,6 +314,12 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			display: flex;
 			justify-content: space-between;
 			align-items: center
+		}
+
+		.panel-actions {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem
 		}
 
 		.panel-title {
@@ -416,34 +439,54 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			max-height: 500px;
 			font-family: var(--font-mono);
 			font-size: 0.8rem;
-			display: flex
+			--code-line-height: 1.45rem
 		}
 
 		.line-numbers {
-			padding: 0.75rem 0.5rem;
-			border-right: 1px solid var(--card-border);
-			text-align: right;
-			user-select: none;
-			color: #4b5563;
-			background-color: rgba(0, 0, 0, .15)
+			display: none
 		}
 
 		.code-lines {
 			padding: 0.75rem 0;
-			width: 100%;
+			min-width: max-content;
 			overflow: hidden;
-			white-space: pre
+			white-space: pre;
+			line-height: var(--code-line-height)
+		}
+
+		.code-row {
+			display: grid;
+			grid-template-columns: 4.5rem minmax(0, 1fr);
+			min-height: var(--code-line-height);
+			line-height: var(--code-line-height)
+		}
+
+		.code-row-number {
+			padding: 0 0.5rem;
+			border-right: 1px solid var(--card-border);
+			text-align: right;
+			user-select: none;
+			color: #4b5563;
+			background-color: rgba(0, 0, 0, .15);
+			font-weight: 400
 		}
 
 		.code-line {
 			padding: 0 0.875rem;
 			display: block;
-			min-height: 1.4em;
 			color: #e2e8f0
 		}
 
-		.code-line.highlight {
+		.code-row.highlight {
 			background-color: rgba(239, 68, 68, .12);
+		}
+
+		.code-row.highlight .code-row-number {
+			color: var(--accent-red);
+			font-weight: 700
+		}
+
+		.code-row.highlight .code-line {
 			border-left: 3px solid var(--accent-red);
 			padding-left: calc(0.875rem - 3px);
 			color: #fca5a5
@@ -634,7 +677,8 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 				color: #334155
 			}
 
-			.line-numbers {
+			.line-numbers,
+			.code-row-number {
 				color: #64748b;
 				background-color: rgba(0, 0, 0, 0.03)
 			}
@@ -671,7 +715,7 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 					class="error-badge <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>"><?php echo esc_html( $type ); ?></span>
 				<h1 class="error-title"><?php echo esc_html( $message ); ?></h1>
 				<div class="error-meta <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
-					<span><?php echo esc_html( $triggerPoint['file'] ); ?>:<?php echo esc_html( $triggerPoint['line'] ); ?></span><button
+					<span><?php echo esc_html( get_display_path( $triggerPoint['file'] ) ); ?>:<?php echo esc_html( $triggerPoint['line'] ); ?></span><button
 						class="btn-copy-path"
 						onclick="copyText('<?php echo esc_js( $triggerPoint['file'] ); ?>:<?php echo esc_js( $triggerPoint['line'] ); ?>')"
 						title="Copy path to clipboard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -710,19 +754,26 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 										class="trace-index">#<?php echo $index; ?></span><?php if ( $is_trigger ) : ?><span
 											class="trace-trigger-badge">Trigger Point</span><?php endif; ?></div><span
 									class="trace-func"><?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview" style="color: var(--text-muted); font-size: 0.72rem; font-weight: normal;"><?php echo esc_html( get_args_preview( $frame['args'] ) ); ?></span>)</span><span
-									class="trace-file-info"><?php echo esc_html( $frame['file'] ); ?>:<?php echo esc_html( $frame['line'] ); ?></span>
+									class="trace-file-info"><?php echo esc_html( get_display_path( $frame['file'] ) ); ?>:<?php echo esc_html( $frame['line'] ); ?></span>
 							</button><?php endforeach; ?><?php endif; ?>
 				</div>
 			</section>
 			<div class="workspace-main">
 				<section class="workspace-panel code-viewer-panel">
 					<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
-							Snippet</span><button class="btn-copy-path" id="code-viewer-copy-btn"
-							title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-								stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-							</svg></button></div>
+							Snippet</span><div class="panel-actions"><a class="btn-copy-path" id="code-viewer-vscode-link"
+								href="#" title="Open in VS Code"><svg width="14" height="14" viewBox="0 0 24 24"
+									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+									stroke-linejoin="round">
+									<path d="M15 3h6v6"></path>
+									<path d="M10 14 21 3"></path>
+									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+								</svg></a><button class="btn-copy-path" id="code-viewer-copy-btn"
+								title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+									stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+									<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+								</svg></button></div></div>
 					<div class="code-container">
 						<div class="line-numbers" id="code-line-numbers"></div>
 						<pre class="code-lines"><code id="code-content"></code></pre>
@@ -772,6 +823,7 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 		</svg><span id="toast-message">Copied!</span></div>
 	<script>
 		const wpDebuggerData = <?php echo json_encode( array( 'message' => $message, 'type' => $type, 'stackTrace' => $stackTrace, 'superglobals' => $superglobals, 'triggerPoint' => $triggerPoint ), JSON_UNESCAPED_SLASHES ); ?>;
+		const wpDebuggerHomePath = <?php echo json_encode( rtrim( (string) getenv( 'HOME' ), '/' ), JSON_UNESCAPED_SLASHES ); ?>;
 		let activeFrameIndex = 0;
 
 		function showToast(e) {
@@ -791,6 +843,21 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			})
 		}
 
+		function getVsCodeUrl(filePath, line) {
+			const encodedPath = String(filePath).split("/").map(encodeURIComponent).join("/");
+			return `vscode://file${encodedPath}:${Number(line) || 1}:1`;
+		}
+
+		function getDisplayPath(filePath) {
+			const path = String(filePath);
+			if (!wpDebuggerHomePath) return path;
+			if (path === wpDebuggerHomePath) return "~";
+			if (path.startsWith(`${wpDebuggerHomePath}/`)) {
+				return `~${path.slice(wpDebuggerHomePath.length)}`;
+			}
+			return path;
+		}
+
 		function selectFrame(e) {
 			activeFrameIndex = e;
 			const t = document.querySelectorAll(".trace-item");
@@ -803,24 +870,28 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			});
 			const r = wpDebuggerData.stackTrace[e];
 			if (!r) return;
-			document.getElementById("code-viewer-filename").innerText = r.file + ":" + r.line;
+			document.getElementById("code-viewer-filename").innerText = getDisplayPath(r.filePath || r.file) + ":" + r.line;
 			document.getElementById("code-viewer-copy-btn").onclick = () => copyText(r.filePath + ":" + r.line);
-			const o = r.startLine, c = r.line, a = r.snippet.split("\n"), n = document.getElementById("code-line-numbers");
+			document.getElementById("code-viewer-vscode-link").href = getVsCodeUrl(r.filePath, r.line);
+			const o = Number(r.startLine), c = Number(r.line), a = r.snippet.split(/\r?\n/), n = document.getElementById("code-line-numbers");
 			n.innerHTML = "";
 			const l = document.getElementById("code-content");
 			l.innerHTML = "";
 			a.forEach((e, t) => {
-				const r = o + t, a = document.createElement("div");
-				a.style.height = "1.4em";
-				a.style.padding = "0 0.5rem";
-				a.style.fontWeight = r === c ? "700" : "400";
-				a.style.color = r === c ? "var(--accent-red)" : "#4b5563";
-				a.innerText = r;
-				n.appendChild(a);
+				const r = o + t;
+				const a = document.createElement("span");
+				a.className = "code-row-number";
+				a.textContent = r;
+
 				const s = document.createElement("span");
-				s.className = "code-line" + (r === c ? " highlight" : "");
-				s.innerText = e || " ";
-				l.appendChild(s)
+				s.className = "code-line";
+				s.textContent = e || " ";
+
+				const i = document.createElement("span");
+				i.className = "code-row" + (r === c ? " highlight" : "");
+				i.appendChild(a);
+				i.appendChild(s);
+				l.appendChild(i)
 			});
 			const s = l.querySelector(".highlight");
 			if (s) {
@@ -879,26 +950,26 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			const e = wpDebuggerData;
 			let t = "### WP Debugger: Error Report\n\n";
 			t += `**Error:** \`${e.message}\`\n`;
-			t += `**Location:** \`${e.triggerPoint.file}\` on line \`${e.triggerPoint.line}\`\n\n`;
+			t += `**Location:** \`${getDisplayPath(e.triggerPoint.file)}\` on line \`${e.triggerPoint.line}\`\n\n`;
 			t += "#### Primary Code Snippet:\n";
 			if (e.stackTrace && e.stackTrace[0]) {
 				const r = e.stackTrace[0];
-				t += `File: \`${r.filePath}\` (Lines ${r.startLine} - ${r.endLine})\n`;
+				t += `File: \`${getDisplayPath(r.filePath || r.file)}\` (Lines ${r.startLine} - ${r.endLine})\n`;
 				t += "```php\n";
-				r.snippet.split("\n").forEach((e, a) => {
-					const o = r.startLine + a;
-					const l = o === r.line ? " -> " : "    ";
-					t += `${o}${l}${e}\n`
+				r.snippet.split("\n").forEach((snippetLine, index) => {
+					const lineNumber = Number(r.startLine) + index;
+					const marker = lineNumber === Number(r.line) ? " -> " : "    ";
+					t += `${lineNumber}${marker}${snippetLine}\n`
 				});
 				t += "```\n\n"
 			}
 			t += "#### Stack Trace:\n";
-			e.stackTrace.forEach((e, r) => {
-				let o = "main()";
-				if (e.function) {
-					o = e.class ? `${e.class}${e.type}${e.function}()` : `${e.function}()`
+			e.stackTrace.forEach((frame, index) => {
+				let functionName = "main()";
+				if (frame.function) {
+					functionName = frame.class ? `${frame.class}${frame.type}${frame.function}()` : `${frame.function}()`
 				}
-				t += `${r}. \`${o}\` in \`${e.file}:${e.line}\`\n`
+				t += `${index}. \`${functionName}\` in \`${getDisplayPath(frame.filePath || frame.file)}:${frame.line}\`\n`
 			});
 			navigator.clipboard.writeText(t).then(() => {
 				showToast("Error report copied for AI!")
