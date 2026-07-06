@@ -1,3 +1,28 @@
+<?php
+if ( ! function_exists( 'get_args_preview' ) ) {
+	function get_args_preview( array $args ): string {
+		$preview = array();
+		foreach ( $args as $arg ) {
+			if ( is_null( $arg ) ) {
+				$preview[] = 'null';
+			} elseif ( is_bool( $arg ) ) {
+				$preview[] = $arg ? 'true' : 'false';
+			} elseif ( is_numeric( $arg ) ) {
+				$preview[] = (string) $arg;
+			} elseif ( is_string( $arg ) ) {
+				$truncated = strlen( $arg ) > 15 ? substr( $arg, 0, 12 ) . '...' : $arg;
+				$preview[] = '"' . $truncated . '"';
+			} elseif ( is_array( $arg ) ) {
+				$preview[] = empty( $arg ) ? '[]' : '[...]';
+			} else {
+				$preview[] = gettype( $arg );
+			}
+		}
+		$joined = implode( ', ', $preview );
+		return strlen( $joined ) > 30 ? substr( $joined, 0, 27 ) . '...' : $joined;
+	}
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -353,6 +378,36 @@
 			flex-grow: 1
 		}
 
+		.workspace-main {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			min-width: 0;
+		}
+
+		.arguments-panel {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.arguments-content {
+			padding: 1rem;
+			overflow-y: auto;
+			max-height: 250px;
+		}
+
+		.arg-row {
+			border-bottom: 1px dashed var(--card-border);
+			padding-bottom: 0.5rem;
+			margin-bottom: 0.5rem;
+		}
+
+		.arg-row:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+			margin-bottom: 0;
+		}
+
 		.code-container {
 			position: relative;
 			flex-grow: 1;
@@ -654,24 +709,30 @@
 								<div class="trace-item-header"><span
 										class="trace-index">#<?php echo $index; ?></span><?php if ( $is_trigger ) : ?><span
 											class="trace-trigger-badge">Trigger Point</span><?php endif; ?></div><span
-									class="trace-func"><?php echo esc_html( $func_name ); ?>()</span><span
+									class="trace-func"><?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview" style="color: var(--text-muted); font-size: 0.72rem; font-weight: normal;"><?php echo esc_html( get_args_preview( $frame['args'] ) ); ?></span>)</span><span
 									class="trace-file-info"><?php echo esc_html( $frame['file'] ); ?>:<?php echo esc_html( $frame['line'] ); ?></span>
 							</button><?php endforeach; ?><?php endif; ?>
 				</div>
 			</section>
-			<section class="workspace-panel code-viewer-panel">
-				<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
-						Snippet</span><button class="btn-copy-path" id="code-viewer-copy-btn"
-						title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg></button></div>
-				<div class="code-container">
-					<div class="line-numbers" id="code-line-numbers"></div>
-					<pre class="code-lines"><code id="code-content"></code></pre>
-				</div>
-			</section>
+			<div class="workspace-main">
+				<section class="workspace-panel code-viewer-panel">
+					<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
+							Snippet</span><button class="btn-copy-path" id="code-viewer-copy-btn"
+							title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+								stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+							</svg></button></div>
+					<div class="code-container">
+						<div class="line-numbers" id="code-line-numbers"></div>
+						<pre class="code-lines"><code id="code-content"></code></pre>
+					</div>
+				</section>
+				<section class="workspace-panel arguments-panel">
+					<div class="panel-header"><span class="panel-title">Arguments</span></div>
+					<div class="arguments-content" id="arguments-content"></div>
+				</section>
+			</div>
 		</main>
 		<footer class="tabs-card">
 			<div class="tabs-header">
@@ -709,7 +770,255 @@
 			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
 			<polyline points="22 4 12 14.01 9 11.01"></polyline>
 		</svg><span id="toast-message">Copied!</span></div>
-	<script>const wpDebuggerData = <?php echo json_encode( array( 'message' => $message, 'type' => $type, 'stackTrace' => $stackTrace, 'superglobals' => $superglobals, 'triggerPoint' => $triggerPoint ), JSON_UNESCAPED_SLASHES ); ?>; let activeFrameIndex = 0; function showToast(e) { const t = document.getElementById("toast"); document.getElementById("toast-message").innerText = e; t.classList.add("show"); setTimeout(() => { t.classList.remove("show") }, 3e3) } function copyText(e) { navigator.clipboard.writeText(e).then(() => { showToast("Path copied to clipboard") }).catch(e => { console.error("Could not copy text: ", e) }) } function selectFrame(e) { activeFrameIndex = e; const t = document.querySelectorAll(".trace-item"); t.forEach((t, r) => { if (r === e) { t.classList.add("active") } else { t.classList.remove("active") } }); const r = wpDebuggerData.stackTrace[e]; if (!r) return; document.getElementById("code-viewer-filename").innerText = r.file + ":" + r.line; document.getElementById("code-viewer-copy-btn").onclick = () => copyText(r.filePath + ":" + r.line); const o = r.startLine, c = r.line, a = r.snippet.split("\n"), n = document.getElementById("code-line-numbers"); n.innerHTML = ""; const l = document.getElementById("code-content"); l.innerHTML = ""; a.forEach((e, t) => { const r = o + t, a = document.createElement("div"); a.style.height = "1.4em"; a.style.padding = "0 0.5rem"; a.style.fontWeight = r === c ? "700" : "400"; a.style.color = r === c ? "var(--accent-red)" : "#4b5563"; a.innerText = r; n.appendChild(a); const s = document.createElement("span"); s.className = "code-line" + (r === c ? " highlight" : ""); s.innerText = e || " "; l.appendChild(s) }); const s = l.querySelector(".highlight"); if (s) { setTimeout(() => { s.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" }) }, 50) } } function copyForAI() { const e = wpDebuggerData; let t = "### WP Debugger: Error Report\n\n"; t += `**Error:** \`${e.message}\`\n`; t += `**Location:** \`${e.triggerPoint.file}\` on line \`${e.triggerPoint.line}\`\n\n`; t += "#### Primary Code Snippet:\n"; if (e.stackTrace && e.stackTrace[0]) { const r = e.stackTrace[0]; t += `File: \`${r.filePath}\` (Lines ${r.startLine} - ${r.endLine})\n`; t += "```php\n"; r.snippet.split("\n").forEach((e, a) => { const o = r.startLine + a; const l = o === r.line ? " -> " : "    "; t += `${o}${l}${e}\n` }); t += "```\n\n" } t += "#### Stack Trace:\n"; e.stackTrace.forEach((e, r) => { let o = "main()"; if (e.function) { o = e.class ? `${e.class}${e.type}${e.function}()` : `${e.function}()` } t += `${r}. \`${o}\` in \`${e.file}:${e.line}\`\n` }); navigator.clipboard.writeText(t).then(() => { showToast("Error report copied for AI!") }).catch(e => { console.error("Copy failed: ", e) }) } function ignoreError() { document.cookie = "wp_debugger_ignore=1; path=/; max-age=31536000"; showToast("Muted. Reloading..."); setTimeout(() => { window.location.reload() }, 1e3) } function switchTab(e) { const t = document.querySelectorAll(".tab-btn"); t.forEach(t => { if (t.innerText === e) { t.classList.add("active") } else { t.classList.remove("active") } }); const r = document.querySelectorAll(".tab-content"); r.forEach(t => { if (t.id === `tab-content-${e}`) { t.classList.add("active") } else { t.classList.remove("active") } }) } function createTree(e, t) { const r = document.getElementById(e); if (!r) return; r.innerHTML = ""; if (Object.keys(t).length === 0) { r.innerHTML = '<span class="empty-message">No entries</span>'; return } const o = buildTreeHTML(t); r.appendChild(o) } function buildTreeHTML(e, t = null) { const r = document.createElement("div"); if (e !== null && typeof e === "object") { r.className = "tree-node"; const o = document.createElement("span"); o.className = "tree-node-trigger"; if (t !== null) { const e = document.createElement("span"); e.className = "tree-key"; e.innerText = `"${t}"`; o.appendChild(e); o.appendChild(document.createTextNode(": ")) } const a = Array.isArray(e) ? `Array [${e.length}]` : `Object {${Object.keys(e).length}}`; const oLabel = document.createElement("span"); oLabel.style.color = "var(--text-muted)"; oLabel.innerText = a; o.appendChild(oLabel); r.appendChild(o); const n = document.createElement("div"); n.className = "tree-node-children"; for (const t in e) { if (e.hasOwnProperty(t)) { n.appendChild(buildTreeHTML(e[t], t)) } } r.appendChild(n); o.addEventListener("click", e => { e.stopPropagation(); r.classList.toggle("expanded") }) } else { r.className = "tree-leaf"; if (t !== null) { const e = document.createElement("span"); e.className = "tree-key"; e.innerText = `"${t}"`; r.appendChild(e); r.appendChild(document.createTextNode(": ")) } const o = document.createElement("span"); if (typeof e === "string") { o.className = "tree-value-string"; o.innerText = `"${e}"` } else if (typeof e === "number") { o.className = "tree-value-number"; o.innerText = e } else if (typeof e === "boolean") { o.className = "tree-value-boolean"; o.innerText = e ? "true" : "false" } else if (e === null) { o.className = "tree-value-null"; o.innerText = "null" } else { o.innerText = String(e) } r.appendChild(o) } return r } document.addEventListener("DOMContentLoaded", () => { if (wpDebuggerData.stackTrace && wpDebuggerData.stackTrace.length > 0) { selectFrame(0) } for (const e in wpDebuggerData.superglobals) { if (wpDebuggerData.superglobals.hasOwnProperty(e)) { const t = e.replace("$", ""); createTree(`tree-${t}`, wpDebuggerData.superglobals[e]) } } });</script>
+	<script>
+		const wpDebuggerData = <?php echo json_encode( array( 'message' => $message, 'type' => $type, 'stackTrace' => $stackTrace, 'superglobals' => $superglobals, 'triggerPoint' => $triggerPoint ), JSON_UNESCAPED_SLASHES ); ?>;
+		let activeFrameIndex = 0;
+
+		function showToast(e) {
+			const t = document.getElementById("toast");
+			document.getElementById("toast-message").innerText = e;
+			t.classList.add("show");
+			setTimeout(() => {
+				t.classList.remove("show")
+			}, 3000)
+		}
+
+		function copyText(e) {
+			navigator.clipboard.writeText(e).then(() => {
+				showToast("Path copied to clipboard")
+			}).catch(err => {
+				console.error("Could not copy text: ", err)
+			})
+		}
+
+		function selectFrame(e) {
+			activeFrameIndex = e;
+			const t = document.querySelectorAll(".trace-item");
+			t.forEach((t, r) => {
+				if (r === e) {
+					t.classList.add("active")
+				} else {
+					t.classList.remove("active")
+				}
+			});
+			const r = wpDebuggerData.stackTrace[e];
+			if (!r) return;
+			document.getElementById("code-viewer-filename").innerText = r.file + ":" + r.line;
+			document.getElementById("code-viewer-copy-btn").onclick = () => copyText(r.filePath + ":" + r.line);
+			const o = r.startLine, c = r.line, a = r.snippet.split("\n"), n = document.getElementById("code-line-numbers");
+			n.innerHTML = "";
+			const l = document.getElementById("code-content");
+			l.innerHTML = "";
+			a.forEach((e, t) => {
+				const r = o + t, a = document.createElement("div");
+				a.style.height = "1.4em";
+				a.style.padding = "0 0.5rem";
+				a.style.fontWeight = r === c ? "700" : "400";
+				a.style.color = r === c ? "var(--accent-red)" : "#4b5563";
+				a.innerText = r;
+				n.appendChild(a);
+				const s = document.createElement("span");
+				s.className = "code-line" + (r === c ? " highlight" : "");
+				s.innerText = e || " ";
+				l.appendChild(s)
+			});
+			const s = l.querySelector(".highlight");
+			if (s) {
+				setTimeout(() => {
+					s.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })
+				}, 50)
+			}
+			renderArguments(r.args);
+		}
+
+		function renderArguments(args) {
+			const container = document.getElementById("arguments-content");
+			if (!container) return;
+			container.innerHTML = "";
+			
+			if (!args || Object.keys(args).length === 0) {
+				container.innerHTML = '<span class="empty-message">No arguments for this frame.</span>';
+				return;
+			}
+			
+			const list = document.createElement("div");
+			list.style.display = "flex";
+			list.style.flexDirection = "column";
+			list.style.gap = "0.5rem";
+			
+			for (const key in args) {
+				if (args.hasOwnProperty(key)) {
+					const argValue = args[key];
+					const argRow = document.createElement("div");
+					argRow.className = "arg-row";
+					
+					const argLabel = document.createElement("div");
+					argLabel.style.fontWeight = "600";
+					argLabel.style.fontSize = "0.75rem";
+					argLabel.style.color = "var(--accent-indigo)";
+					argLabel.innerText = `Argument #${key}:`;
+					
+					const argValContainer = document.createElement("div");
+					argValContainer.style.paddingLeft = "0.5rem";
+					
+					const treeNode = buildTreeHTML(argValue);
+					if (argValue !== null && typeof argValue === "object") {
+						treeNode.classList.add("expanded");
+					}
+					
+					argValContainer.appendChild(treeNode);
+					argRow.appendChild(argLabel);
+					argRow.appendChild(argValContainer);
+					list.appendChild(argRow);
+				}
+			}
+			container.appendChild(list);
+		}
+
+		function copyForAI() {
+			const e = wpDebuggerData;
+			let t = "### WP Debugger: Error Report\n\n";
+			t += `**Error:** \`${e.message}\`\n`;
+			t += `**Location:** \`${e.triggerPoint.file}\` on line \`${e.triggerPoint.line}\`\n\n`;
+			t += "#### Primary Code Snippet:\n";
+			if (e.stackTrace && e.stackTrace[0]) {
+				const r = e.stackTrace[0];
+				t += `File: \`${r.filePath}\` (Lines ${r.startLine} - ${r.endLine})\n`;
+				t += "```php\n";
+				r.snippet.split("\n").forEach((e, a) => {
+					const o = r.startLine + a;
+					const l = o === r.line ? " -> " : "    ";
+					t += `${o}${l}${e}\n`
+				});
+				t += "```\n\n"
+			}
+			t += "#### Stack Trace:\n";
+			e.stackTrace.forEach((e, r) => {
+				let o = "main()";
+				if (e.function) {
+					o = e.class ? `${e.class}${e.type}${e.function}()` : `${e.function}()`
+				}
+				t += `${r}. \`${o}\` in \`${e.file}:${e.line}\`\n`
+			});
+			navigator.clipboard.writeText(t).then(() => {
+				showToast("Error report copied for AI!")
+			}).catch(err => {
+				console.error("Copy failed: ", err)
+			})
+		}
+
+		function ignoreError() {
+			document.cookie = "wp_debugger_ignore=1; path=/; max-age=31536000";
+			showToast("Muted. Reloading...");
+			setTimeout(() => {
+				window.location.reload()
+			}, 1000)
+		}
+
+		function switchTab(e) {
+			const t = document.querySelectorAll(".tab-btn");
+			t.forEach(t => {
+				if (t.innerText === e) {
+					t.classList.add("active")
+				} else {
+					t.classList.remove("active")
+				}
+			});
+			const r = document.querySelectorAll(".tab-content");
+			r.forEach(t => {
+				if (t.id === `tab-content-${e}`) {
+					t.classList.add("active")
+				} else {
+					t.classList.remove("active")
+				}
+			})
+		}
+
+		function createTree(e, t) {
+			const r = document.getElementById(e);
+			if (!r) return;
+			r.innerHTML = "";
+			if (Object.keys(t).length === 0) {
+				r.innerHTML = '<span class="empty-message">No entries</span>';
+				return
+			}
+			const o = buildTreeHTML(t);
+			r.appendChild(o)
+		}
+
+		function buildTreeHTML(e, t = null) {
+			const r = document.createElement("div");
+			if (e !== null && typeof e === "object") {
+				r.className = "tree-node";
+				const o = document.createElement("span");
+				o.className = "tree-node-trigger";
+				if (t !== null) {
+					const e = document.createElement("span");
+					e.className = "tree-key";
+					e.innerText = `"${t}"`;
+					o.appendChild(e);
+					o.appendChild(document.createTextNode(": "))
+				}
+				const a = Array.isArray(e) ? `Array [${e.length}]` : `Object {${Object.keys(e).length}}`;
+				const oLabel = document.createElement("span");
+				oLabel.style.color = "var(--text-muted)";
+				oLabel.innerText = a;
+				o.appendChild(oLabel);
+				r.appendChild(o);
+				const n = document.createElement("div");
+				n.className = "tree-node-children";
+				for (const t in e) {
+					if (e.hasOwnProperty(t)) {
+						n.appendChild(buildTreeHTML(e[t], t))
+					}
+				}
+				r.appendChild(n);
+				o.addEventListener("click", e => {
+					e.stopPropagation();
+					r.classList.toggle("expanded")
+				})
+			} else {
+				r.className = "tree-leaf";
+				if (t !== null) {
+					const e = document.createElement("span");
+					e.className = "tree-key";
+					e.innerText = `"${t}"`;
+					r.appendChild(e);
+					r.appendChild(document.createTextNode(": "))
+				}
+				const o = document.createElement("span");
+				if (typeof e === "string") {
+					o.className = "tree-value-string";
+					o.innerText = `"${e}"`
+				} else if (typeof e === "number") {
+					o.className = "tree-value-number";
+					o.innerText = e
+				} else if (typeof e === "boolean") {
+					o.className = "tree-value-boolean";
+					o.innerText = e ? "true" : "false"
+				} else if (e === null) {
+					o.className = "tree-value-null";
+					o.innerText = "null"
+				} else {
+					o.innerText = String(e)
+				}
+				r.appendChild(o)
+			}
+			return r
+		}
+
+		document.addEventListener("DOMContentLoaded", () => {
+			if (wpDebuggerData.stackTrace && wpDebuggerData.stackTrace.length > 0) {
+				selectFrame(0)
+			}
+			for (const e in wpDebuggerData.superglobals) {
+				if (wpDebuggerData.superglobals.hasOwnProperty(e)) {
+					const t = e.replace("$", "");
+					createTree(`tree-${t}`, wpDebuggerData.superglobals[e])
+				}
+			}
+		});
+	</script>
 </body>
 
 </html>

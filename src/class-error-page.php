@@ -16,7 +16,7 @@ use RuntimeException;
 class Error_Page {
 
 	private const SUPERGLOBAL_ITEM_LIMIT = 200;
-	private const CONTEXT_LINE_WINDOW    = 5;
+	private const CONTEXT_LINE_COUNT     = 40;
 	private const MAX_RECURSION_DEPTH    = 10;
 	/**
 	 * Toggle used to prevent re-entrant handling.
@@ -302,11 +302,26 @@ class Error_Page {
 	 * @return array{startLine:int,endLine:int,snippet:string}
 	 */
 	private function get_file_snippet( string $file_path, int $line ): array {
-		$start_line = max( 1, $line - self::CONTEXT_LINE_WINDOW );
-		$end_line   = $line + self::CONTEXT_LINE_WINDOW;
-
 		try {
 			$file = new SplFileObject( $file_path, 'r' );
+			$file->seek( PHP_INT_MAX );
+			$total_lines = $file->key() + 1;
+
+			$line       = max( 1, min( $line, $total_lines ) );
+			$line_count = min( self::CONTEXT_LINE_COUNT, $total_lines );
+			$before     = (int) floor( ( $line_count - 1 ) / 2 );
+			$after      = $line_count - $before - 1;
+			$start_line = max( 1, $line - $before );
+			$end_line   = min( $total_lines, $line + $after );
+
+			if ( $end_line - $start_line + 1 < $line_count ) {
+				if ( 1 === $start_line ) {
+					$end_line = min( $total_lines, $start_line + $line_count - 1 );
+				} else {
+					$start_line = max( 1, $end_line - $line_count + 1 );
+				}
+			}
+
 			$file->seek( $start_line - 1 );
 
 			$snippet      = '';
@@ -328,8 +343,8 @@ class Error_Page {
 			);
 		} catch ( RuntimeException $e ) {
 			return array(
-				'startLine' => $start_line,
-				'endLine'   => $start_line,
+				'startLine' => max( 1, $line ),
+				'endLine'   => max( 1, $line ),
 				'snippet'   => '',
 			);
 		}
@@ -357,10 +372,11 @@ class Error_Page {
 	 * @param mixed $data Input data.
 	 * @param int $limit Maximum items to keep per level.
 	 * @param int $depth Current recursion depth.
+	 * @param bool $filter_empty Whether to filter empty array elements (defaults to false).
 	 *
 	 * @return mixed Processed data.
 	 */
-	private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
+	private function process_array_value( $data, int $limit = 0, int $depth = 0, bool $filter_empty = false ) {
 		// Prevent excessive recursion depth.
 		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
 			return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
@@ -389,16 +405,16 @@ class Error_Page {
 
 		// Process nested values.
 		foreach ( $data as $key => $value ) {
-			$processed = $this->process_array_value( $value, $limit, $depth + 1 );
+			$processed = $this->process_array_value( $value, $limit, $depth + 1, $filter_empty );
 
-			if ( 0 === $limit && is_array( $processed ) && empty( $processed ) ) {
+			if ( $filter_empty && is_array( $processed ) && empty( $processed ) ) {
 				unset( $data[ $key ] );
 			} else {
 				$data[ $key ] = $processed;
 			}
 		}
 
-		return 0 === $limit ? array_filter( $data ) : $data;
+		return $filter_empty ? array_filter( $data ) : $data;
 	}
 
 	/**
