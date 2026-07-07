@@ -314,14 +314,42 @@
             }, 3000);
         }
 
+        function fallbackCopyText(text, successMessage) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast(successMessage);
+                } else {
+                    console.error('Fallback copy failed');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
         function copyJson(index) {
             const val = wpDebuggerData[index];
             const jsonStr = JSON.stringify(val, null, 2);
-            navigator.clipboard.writeText(jsonStr).then(() => {
-                showToast('Copied JSON to clipboard');
-            }).catch(err => {
-                console.error('Could not copy JSON: ', err);
-            });
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(jsonStr).then(() => {
+                    showToast('Copied JSON to clipboard');
+                }).catch(err => {
+                    console.error('Could not copy JSON: ', err);
+                    fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
+                });
+            } else {
+                fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
+            }
         }
 
         // Tree build helper

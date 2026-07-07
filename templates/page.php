@@ -835,12 +835,40 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			}, 3000)
 		}
 
+		function fallbackCopyText(text, successMessage) {
+			const textArea = document.createElement("textarea");
+			textArea.value = text;
+			textArea.style.top = "0";
+			textArea.style.left = "0";
+			textArea.style.position = "fixed";
+			textArea.style.opacity = "0";
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+			try {
+				const successful = document.execCommand("copy");
+				if (successful) {
+					showToast(successMessage);
+				} else {
+					console.error("Fallback copy failed");
+				}
+			} catch (err) {
+				console.error("Fallback copy failed: ", err);
+			}
+			document.body.removeChild(textArea);
+		}
+
 		function copyText(e) {
-			navigator.clipboard.writeText(e).then(() => {
-				showToast("Path copied to clipboard")
-			}).catch(err => {
-				console.error("Could not copy text: ", err)
-			})
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(e).then(() => {
+					showToast("Path copied to clipboard")
+				}).catch(err => {
+					console.error("Could not copy text: ", err);
+					fallbackCopyText(e, "Path copied to clipboard");
+				});
+			} else {
+				fallbackCopyText(e, "Path copied to clipboard");
+			}
 		}
 
 		function getVsCodeUrl(filePath, line) {
@@ -971,11 +999,16 @@ if ( ! function_exists( 'get_display_path' ) ) {
 				}
 				t += `${index}. \`${functionName}\` in \`${getDisplayPath(frame.filePath || frame.file)}:${frame.line}\`\n`
 			});
-			navigator.clipboard.writeText(t).then(() => {
-				showToast("Error report copied for AI!")
-			}).catch(err => {
-				console.error("Copy failed: ", err)
-			})
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(t).then(() => {
+					showToast("Error report copied for AI!")
+				}).catch(err => {
+					console.error("Copy failed: ", err);
+					fallbackCopyText(t, "Error report copied for AI!");
+				});
+			} else {
+				fallbackCopyText(t, "Error report copied for AI!");
+			}
 		}
 
 		function ignoreError() {
