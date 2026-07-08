@@ -54,13 +54,37 @@ function log_stack_trace( array $trace ) {
 }
 
 /**
+ * Returns true when the current process is running in a terminal (CLI/WP-CLI) with no browser client.
+ *
+ * @return bool
+ */
+function is_terminal_request(): bool {
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		return true;
+	}
+
+	if ( PHP_SAPI === 'cli' ) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
  * Outputs a formatted dump of a variable for debugging purposes.
  *
  * @return void
  * @throws Exception
  */
 function dump() {
-	\DevKabir\WPDebugger\Template::render( 'dump', recursively_decode_json( func_get_args() ) );
+	$data = recursively_decode_json( func_get_args() );
+
+	if ( is_terminal_request() ) {
+		echo json_encode( count( $data ) === 1 ? $data[0] : $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . PHP_EOL;
+		return;
+	}
+
+	\DevKabir\WPDebugger\Template::render( 'dump', $data );
 }
 
 /**
