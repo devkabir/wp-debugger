@@ -1,0 +1,16 @@
+<?php
+/**
+ * Load WP Debugger before other must-use plugins.
+ *
+ * @package DevKabir\WPDebugger
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	return;
+}
+
+$wp_debugger_plugin = dirname( __DIR__ ) . '/plugins/wp-debugger/plugin.php';
+
+if ( file_exists( $wp_debugger_plugin ) ) {
+	require_once $wp_debugger_plugin;
+}

@@ -18,6 +18,15 @@ class Error_Page {
 	private const SUPERGLOBAL_ITEM_LIMIT = 200;
 	private const CONTEXT_LINE_COUNT     = 40;
 	private const MAX_RECURSION_DEPTH    = 10;
+	private const FATAL_ERROR_TYPES      = array(
+		E_ERROR,
+		E_PARSE,
+		E_CORE_ERROR,
+		E_COMPILE_ERROR,
+		E_USER_ERROR,
+		E_RECOVERABLE_ERROR,
+	);
+
 	/**
 	 * Toggle used to prevent re-entrant handling.
 	 *
@@ -54,7 +63,7 @@ class Error_Page {
 	 */
 	public function errors( int $severity, string $message, string $file, int $line ): bool {
 		// Skip errors silenced with @ or not fatal.
-		if ( ! ( error_reporting() & $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+		if ( ! ( error_reporting() & $severity ) || ! $this->is_fatal_error_type( $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 			return false;
 		}
 
@@ -122,6 +131,17 @@ class Error_Page {
 		if ( ! headers_sent() ) {
 			function_exists( 'status_header' ) ? status_header( 500 ) : header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror, WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
 		}
+	}
+
+	/**
+	 * Determine whether a PHP error type should use the fatal error page.
+	 *
+	 * @param int $type PHP error type.
+	 *
+	 * @return bool
+	 */
+	private function is_fatal_error_type( int $type ): bool {
+		return in_array( $type, self::FATAL_ERROR_TYPES, true );
 	}
 
 	/**
@@ -464,7 +484,7 @@ class Error_Page {
 	public function shutdown_handler(): void {
 		$last_error = error_get_last();
 
-		if ( null === $last_error ) {
+		if ( null === $last_error || ! $this->is_fatal_error_type( $last_error['type'] ?? 0 ) ) {
 			return;
 		}
 

@@ -36,6 +36,14 @@ define( 'DevKabir\WPDebugger\FILE', __FILE__ );
 */
 require_once __DIR__ . '/autoload.php';
 
+if ( function_exists( 'register_activation_hook' ) ) {
+	register_activation_hook( __FILE__, array( DevKabir\WPDebugger\Plugin::class, 'install_mu_loader' ) );
+}
+
+if ( function_exists( 'register_deactivation_hook' ) ) {
+	register_deactivation_hook( __FILE__, array( DevKabir\WPDebugger\Plugin::class, 'uninstall_mu_loader' ) );
+}
+
 /*
 |--------------------------------------------------------------------------
 | Initiate error page.
