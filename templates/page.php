@@ -706,123 +706,21 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			}
 		}
 	</style>
-</head>
-
-<body>
-	<div class="container">
-		<header class="error-header <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
-			<div class="error-info"><span
-					class="error-badge <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>"><?php echo esc_html( $type ); ?></span>
-				<h1 class="error-title"><?php echo esc_html( $message ); ?></h1>
-				<div class="error-meta <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
-					<span><?php echo esc_html( get_display_path( $triggerPoint['file'] ) ); ?>:<?php echo esc_html( $triggerPoint['line'] ); ?></span><button
-						class="btn-copy-path"
-						onclick="copyText('<?php echo esc_js( $triggerPoint['file'] ); ?>:<?php echo esc_js( $triggerPoint['line'] ); ?>')"
-						title="Copy path to clipboard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg></button>
-				</div>
-			</div>
-			<div class="actions-bar"><button class="btn btn-indigo" onclick="copyForAI()"><svg width="14" height="14"
-						viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-						stroke-linejoin="round">
-						<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-						<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-					</svg>Copy for AI</button><button class="btn btn-red" onclick="ignoreError()"><svg width="14"
-						height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round">
-						<path d="M18 6L6 18M6 6l12 12"></path>
-					</svg>Ignore</button></div>
-		</header>
-		<main class="workspace">
-			<section class="workspace-panel">
-				<div class="panel-header"><span class="panel-title">Stack Trace</span></div>
-				<div class="trace-list" id="trace-list"><?php if ( empty( $stackTrace ) ) : ?>
-						<div class="trace-item empty-message">No stack trace available.</div>
-					<?php else : ?> 	<?php foreach ( $stackTrace as $index => $frame ) : ?>
-							<?php
-							$is_trigger = ( $frame['filePath'] === $triggerPoint['file'] && $frame['line'] === $triggerPoint['line'] );
-							$func_name = 'main';
-							if ( ! empty( $frame['function'] ) ) {
-								$func_name = ! empty( $frame['class'] ) ? $frame['class'] . $frame['type'] . $frame['function'] : $frame['function'];
-							}
-							?><button class="trace-item<?php echo $index === 0 ? ' active' : ''; ?>"
-								onclick="selectFrame(<?php echo $index; ?>)">
-								<div class="trace-item-header"><span
-										class="trace-index">#<?php echo $index; ?></span><?php if ( $is_trigger ) : ?><span
-											class="trace-trigger-badge">Trigger Point</span><?php endif; ?></div><span
-									class="trace-func"><?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview" style="color: var(--text-muted); font-size: 0.72rem; font-weight: normal;"><?php echo esc_html( get_args_preview( $frame['args'] ) ); ?></span>)</span><span
-									class="trace-file-info"><?php echo esc_html( get_display_path( $frame['file'] ) ); ?>:<?php echo esc_html( $frame['line'] ); ?></span>
-							</button><?php endforeach; ?><?php endif; ?>
-				</div>
-			</section>
-			<div class="workspace-main">
-				<section class="workspace-panel code-viewer-panel">
-					<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
-							Snippet</span><div class="panel-actions"><a class="btn-copy-path" id="code-viewer-vscode-link"
-								href="#" title="Open in VS Code"><svg width="14" height="14" viewBox="0 0 24 24"
-									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-									stroke-linejoin="round">
-									<path d="M15 3h6v6"></path>
-									<path d="M10 14 21 3"></path>
-									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-								</svg></a><button class="btn-copy-path" id="code-viewer-copy-btn"
-								title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-									stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-									<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-								</svg></button></div></div>
-					<div class="code-container">
-						<div class="line-numbers" id="code-line-numbers"></div>
-						<pre class="code-lines"><code id="code-content"></code></pre>
-					</div>
-				</section>
-				<section class="workspace-panel arguments-panel">
-					<div class="panel-header"><span class="panel-title">Arguments</span></div>
-					<div class="arguments-content" id="arguments-content"></div>
-				</section>
-			</div>
-		</main>
-		<footer class="tabs-card">
-			<div class="tabs-header">
-				<?php
-				$tab_keys = array( '$_GET', '$_POST', '$_FILES', '$_COOKIE', '$_SESSION', '$_SERVER' );
-				$active_tab = '';
-				foreach ( $tab_keys as $key ) {
-					$has_data = ! empty( $superglobals[ $key ] );
-					if ( $key === '$_SERVER' )
-						$has_data = true;
-					if ( $has_data ) {
-						if ( empty( $active_tab ) )
-							$active_tab = $key;
-						$class = $active_tab === $key ? ' active' : '';
-						echo sprintf( '<button class="tab-btn%s" onclick="switchTab(\'%s\')">%s</button>', $class, esc_attr( $key ), esc_html( $key ) );
-					}
-				}
-				?>
-			</div><?php foreach ( $tab_keys as $key ) : ?>
-				<?php
-				$has_data = ! empty( $superglobals[ $key ] );
-				if ( $key === '$_SERVER' )
-					$has_data = true;
-				if ( $has_data ) :
-					$class = $active_tab === $key ? ' active' : '';
-					$val = $superglobals[ $key ] ?? array();
-					?>
-					<div class="tab-content<?php echo $class; ?>" id="tab-content-<?php echo esc_attr( $key ); ?>">
-						<div id="tree-<?php echo esc_attr( str_replace( '$', '', $key ) ); ?>"></div>
-					</div><?php endif; ?><?php endforeach; ?>
-		</footer>
-	</div>
-	<div id="toast" class="toast"><svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-			stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-			<polyline points="22 4 12 14.01 9 11.01"></polyline>
-		</svg><span id="toast-message">Copied!</span></div>
 	<script>
-		const wpDebuggerData = <?php echo json_encode( array( 'message' => $message, 'type' => $type, 'stackTrace' => $stackTrace, 'superglobals' => $superglobals, 'triggerPoint' => $triggerPoint ), JSON_UNESCAPED_SLASHES ); ?>;
+		const wpDebuggerData =
+		<?php
+		echo json_encode(
+			array(
+				'message'      => $message,
+				'type'         => $type,
+				'stackTrace'   => $stackTrace,
+				'superglobals' => $superglobals,
+				'triggerPoint' => $triggerPoint,
+			),
+			JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+		);
+		?>
+		;
 		const wpDebuggerHomePath = <?php echo json_encode( rtrim( (string) getenv( 'HOME' ), '/' ), JSON_UNESCAPED_SLASHES ); ?>;
 		let activeFrameIndex = 0;
 
@@ -901,7 +799,10 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			document.getElementById("code-viewer-filename").innerText = getDisplayPath(r.filePath || r.file) + ":" + r.line;
 			document.getElementById("code-viewer-copy-btn").onclick = () => copyText(r.filePath + ":" + r.line);
 			document.getElementById("code-viewer-vscode-link").href = getVsCodeUrl(r.filePath, r.line);
-			const o = Number(r.startLine), c = Number(r.line), a = r.snippet.split(/\r?\n/), n = document.getElementById("code-line-numbers");
+			const o = Number(r.startLine) || Number(r.line) || 1,
+				c = Number(r.line) || o,
+				a = String(r.snippet || "").split(/\r?\n/),
+				n = document.getElementById("code-line-numbers");
 			n.innerHTML = "";
 			const l = document.getElementById("code-content");
 			l.innerHTML = "";
@@ -1123,6 +1024,133 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			}
 		});
 	</script>
+</head>
+
+<body>
+	<div class="container">
+		<header class="error-header <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
+			<div class="error-info"><span
+					class="error-badge <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>"><?php echo esc_html( $type ); ?></span>
+				<h1 class="error-title"><?php echo esc_html( $message ); ?></h1>
+				<div class="error-meta <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
+					<span><?php echo esc_html( get_display_path( $triggerPoint['file'] ) ); ?>:<?php echo esc_html( $triggerPoint['line'] ); ?></span><button
+						class="btn-copy-path"
+						onclick="copyText('<?php echo esc_js( $triggerPoint['file'] ); ?>:<?php echo esc_js( $triggerPoint['line'] ); ?>')"
+						title="Copy path to clipboard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+						</svg></button>
+				</div>
+			</div>
+			<div class="actions-bar"><button class="btn btn-indigo" onclick="copyForAI()"><svg width="14" height="14"
+						viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+						stroke-linejoin="round">
+						<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+						<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+					</svg>Copy for AI</button><button class="btn btn-red" onclick="ignoreError()"><svg width="14"
+						height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round">
+						<path d="M18 6L6 18M6 6l12 12"></path>
+					</svg>Ignore</button></div>
+		</header>
+		<main class="workspace">
+			<section class="workspace-panel">
+				<div class="panel-header"><span class="panel-title">Stack Trace</span></div>
+				<div class="trace-list" id="trace-list"><?php if ( empty( $stackTrace ) ) : ?>
+						<div class="trace-item empty-message">No stack trace available.</div>
+					<?php
+					else :
+						?>
+						<?php foreach ( $stackTrace as $index => $frame ) : ?>
+							<?php
+							$is_trigger = ( $frame['filePath'] === $triggerPoint['file'] && $frame['line'] === $triggerPoint['line'] );
+							$func_name  = 'main';
+							if ( ! empty( $frame['function'] ) ) {
+								$func_name = ! empty( $frame['class'] ) ? $frame['class'] . $frame['type'] . $frame['function'] : $frame['function'];
+							}
+							?>
+							<button class="trace-item<?php echo $index === 0 ? ' active' : ''; ?>"
+								onclick="selectFrame(<?php echo $index; ?>)">
+								<div class="trace-item-header"><span
+										class="trace-index">#<?php echo $index; ?></span>
+										<?php
+										if ( $is_trigger ) :
+											?>
+											<span
+											class="trace-trigger-badge">Trigger Point</span><?php endif; ?></div><span
+									class="trace-func"><?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview" style="color: var(--text-muted); font-size: 0.72rem; font-weight: normal;"><?php echo esc_html( get_args_preview( $frame['args'] ?? array() ) ); ?></span>)</span><span
+									class="trace-file-info"><?php echo esc_html( get_display_path( $frame['file'] ?? $frame['filePath'] ?? '' ) ); ?>:<?php echo esc_html( $frame['line'] ?? '' ); ?></span>
+							</button><?php endforeach; ?><?php endif; ?>
+				</div>
+			</section>
+			<div class="workspace-main">
+				<section class="workspace-panel code-viewer-panel">
+					<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
+							Snippet</span><div class="panel-actions"><a class="btn-copy-path" id="code-viewer-vscode-link"
+								href="#" title="Open in VS Code"><svg width="14" height="14" viewBox="0 0 24 24"
+									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+									stroke-linejoin="round">
+									<path d="M15 3h6v6"></path>
+									<path d="M10 14 21 3"></path>
+									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+								</svg></a><button class="btn-copy-path" id="code-viewer-copy-btn"
+								title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+									stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+									<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+								</svg></button></div></div>
+					<div class="code-container">
+						<div class="line-numbers" id="code-line-numbers"></div>
+						<pre class="code-lines"><code id="code-content"></code></pre>
+					</div>
+				</section>
+				<section class="workspace-panel arguments-panel">
+					<div class="panel-header"><span class="panel-title">Arguments</span></div>
+					<div class="arguments-content" id="arguments-content"></div>
+				</section>
+			</div>
+		</main>
+		<footer class="tabs-card">
+			<div class="tabs-header">
+				<?php
+				$tab_keys   = array( '$_GET', '$_POST', '$_FILES', '$_COOKIE', '$_SESSION', '$_SERVER' );
+				$active_tab = '';
+				foreach ( $tab_keys as $key ) {
+					$has_data = ! empty( $superglobals[ $key ] );
+					if ( $key === '$_SERVER' ) {
+						$has_data = true;
+					}
+					if ( $has_data ) {
+						if ( empty( $active_tab ) ) {
+							$active_tab = $key;
+						}
+						$class = $active_tab === $key ? ' active' : '';
+						printf( '<button class="tab-btn%s" onclick="switchTab(\'%s\')">%s</button>', $class, esc_attr( $key ), esc_html( $key ) );
+					}
+				}
+				?>
+			</div><?php foreach ( $tab_keys as $key ) : ?>
+				<?php
+				$has_data = ! empty( $superglobals[ $key ] );
+				if ( $key === '$_SERVER' ) {
+					$has_data = true;
+				}
+				if ( $has_data ) :
+					$class = $active_tab === $key ? ' active' : '';
+					$val   = $superglobals[ $key ] ?? array();
+					?>
+					<div class="tab-content<?php echo $class; ?>" id="tab-content-<?php echo esc_attr( $key ); ?>">
+						<div id="tree-<?php echo esc_attr( str_replace( '$', '', $key ) ); ?>"></div>
+					</div><?php endif; ?><?php endforeach; ?>
+		</footer>
+	</div>
+	<div id="toast" class="toast"><svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+			stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+			<polyline points="22 4 12 14.01 9 11.01"></polyline>
+		</svg><span id="toast-message">Copied!</span></div>
+
 </body>
 
 </html>

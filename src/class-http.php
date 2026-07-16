@@ -119,13 +119,12 @@ class Http {
 			'method'       => $parsed_args['method'] ?? 'GET',
 			'timeout'      => $parsed_args['timeout'] ?? 5,
 			'request_data' => array(
-				'headers' => array(
-					'Authorization' => $sanitized_headers['Authorization'] ?? null,
-				),
-				'body'    => $sanitized_body,
+				'body' => $sanitized_body,
 			),
 		);
-
+		if ( defined( 'WP_DEVELOPMENT_MODE' ) ) {
+			$base_data['request_data']['headers']['Authorization'] = $sanitized_headers['Authorization'] ?? null;
+		}
 		if ( is_wp_error( $response ) ) {
 			$error_data          = $base_data;
 			$error_data['error'] = array(
