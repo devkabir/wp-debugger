@@ -65,7 +65,7 @@ class Http {
 
 		$mock_response = $mock_urls[ $url ] ?? null;
 		foreach ( $mock_urls as $mock_url => $response_data ) {
-			if ( $url === $mock_url || fnmatch( $mock_url, $url ) ) {
+			if ( $url === $mock_url || ( strlen( $url ) <= 1024 && strlen( $mock_url ) <= 1024 && fnmatch( $mock_url, $url ) ) ) {
 				$mock_response = $response_data;
 				break;
 			}
