@@ -46,7 +46,7 @@ class Error_Page {
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		set_exception_handler( array( $this, 'handle' ) );
 		register_shutdown_function( array( $this, 'shutdown_handler' ) );
-		error_reporting( - 1 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+		error_reporting( E_ERROR|E_PARSE|E_CORE_ERROR|E_COMPILE_ERROR|E_USER_ERROR|E_RECOVERABLE_ERROR ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
