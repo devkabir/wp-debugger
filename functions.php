@@ -123,9 +123,9 @@ function dump_filter_callbacks( string $filter, bool $dump = true ) {
 	}
 
 	if ( $dump ) {
-		dump( $callbacks );
+		dump( $filter, $callbacks );
 	} else {
-		write_log( $callbacks );
+		write_log( $filter, $callbacks );
 	}
 }
 
