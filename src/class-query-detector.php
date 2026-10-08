@@ -10,6 +10,9 @@ class Query_Detector {
 	 * Hook the detector into shutdown.
 	 */
 	public function __construct() {
+		if ( ! defined( 'SAVEQUERIES' ) || ! SAVEQUERIES ) {
+			define( 'SAVEQUERIES', true );
+		}
 		add_action( 'shutdown', array( $this, 'detect_and_report' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 	}
@@ -26,26 +29,26 @@ class Query_Detector {
 			return;
 		}
 
-		$threshold = (int) apply_filters( 'wp_debugger_n1_threshold', defined( 'N1_QUERY_THRESHOLD' ) ? (int) N1_QUERY_THRESHOLD : 5 );
-		$filter    = (string) apply_filters( 'wp_debugger_n1_caller_filter', '' );
-		$patterns  = array();
+		$threshold = (int) apply_filters( 'wp_debugger_n1_threshold', 5 );
+		$needles   = array_filter( (array) apply_filters( 'wp_debugger_n1_caller_filter', '' ), 'strlen' );
+		$groups    = array();
 
 		foreach ( $wpdb->queries as $query ) {
 			list( $sql, $time, $caller ) = array_pad( (array) $query, 3, '' );
 
-			if ( '' !== $filter && false === strpos( (string) $caller, $filter ) ) {
+			if ( $needles && ! $this->caller_matches( (string) $caller, $needles ) ) {
 				continue;
 			}
 
-			$key = $this->normalize( (string) $sql );
+			$key = (string) $caller;
 
-			$patterns[ $key ]['count']    = ( $patterns[ $key ]['count'] ?? 0 ) + 1;
-			$patterns[ $key ]['time']     = ( $patterns[ $key ]['time'] ?? 0 ) + (float) $time;
-			$patterns[ $key ]['callers'][ (string) $caller ] = true;
+			$groups[ $key ]['count'] = ( $groups[ $key ]['count'] ?? 0 ) + 1;
+			$groups[ $key ]['time']  = ( $groups[ $key ]['time'] ?? 0 ) + (float) $time;
+			$groups[ $key ]['sql']   = (string) $sql;
 		}
 
 		$flagged = array_filter(
-			$patterns,
+			$groups,
 			static function ( $item ) use ( $threshold ) {
 				return $item['count'] >= $threshold;
 			}
@@ -62,7 +65,6 @@ class Query_Detector {
 			}
 		);
 		$log = new Log( 'query-detector.log' );
-		$log->write( sprintf( 'N+1: %d pattern(s) repeated >= %d times.', count( $flagged ), $threshold ) );
 		$log->write( $flagged );
 
 		if ( is_terminal_request() ) {
@@ -88,79 +90,49 @@ class Query_Detector {
 		delete_transient( 'wp_debugger_n1_notice' );
 
 		printf(
-			'<div class="notice notice-warning"><p><strong>WP Debugger:</strong> %d repeated query pattern(s) detected. See the debug log for details.</p></div>',
+			'<div class="notice notice-warning"><p><strong>WP Debugger:</strong> %d repeated query caller(s) detected. See the debug log for details.</p></div>',
 			(int) $count
 		);
 	}
 
 	/**
-	 * Reduce a query to a comparable signature.
+	 * Check a caller chain against any of the configured needles.
 	 *
-	 * @param string $sql Raw SQL statement.
+	 * @param string $caller  Comma separated caller chain from $wpdb->queries.
+	 * @param array  $needles Substrings to look for; any hit keeps the query.
 	 *
-	 * @return string
+	 * @return bool
 	 */
-	private function normalize( string $sql ): string {
-		$sql = preg_replace( '/\'[^\']*\'|"[^"]*"/', '?', $sql );
-		$sql = preg_replace( '/\bIN\s*\(\s*[^)]+\)/i', 'IN (?)', $sql );
-		$sql = preg_replace( '/\b\d+\b/', '?', $sql );
+	private function caller_matches( string $caller, array $needles ): bool {
+		foreach ( $needles as $needle ) {
+			if ( str_contains( $caller, (string) $needle ) ) {
+				return true;
+			}
+		}
 
-		return trim( preg_replace( '/\s+/', ' ', $sql ) );
+		return false;
 	}
 
 	/**
-	 * Print flagged patterns to the terminal.
+	 * Print flagged callers to the terminal.
 	 *
-	 * @param array $flagged Flagged patterns keyed by signature.
+	 * @param array $flagged Flagged groups keyed by caller chain.
 	 *
 	 * @return void
 	 */
 	private function report_cli( array $flagged ): void {
-		$out = sprintf( "\n\033[1;33m⚠ N+1 queries: %d pattern(s)\033[0m\n", count( $flagged ) );
+		$out = sprintf( "\n\033[1;33m⚠ N+1 queries: %d caller(s)\033[0m\n", count( $flagged ) );
 
-		foreach ( $flagged as $pattern => $item ) {
+		foreach ( $flagged as $caller => $item ) {
 			$out .= sprintf(
-				"\n\033[1;31m%5dx\033[0m  %ss  \033[2m(~%sms each)\033[0m\n        %s\n",
+				"\n\033[1;31m%5dx\033[0m  %ss  \033[2m(~%sms each)\033[0m\n        \033[2mfrom\033[0m %s\n",
 				$item['count'],
 				number_format( $item['time'], 4 ),
 				number_format( ( $item['time'] / $item['count'] ) * 1000, 2 ),
-				$pattern
+				$caller
 			);
-
-			foreach ( array_slice( array_keys( $item['callers'] ), 0, 3 ) as $caller ) {
-				$out .= sprintf( "        \033[2mfrom\033[0m %s\n", $this->short_caller( $caller ) );
-			}
-
-			$extra = count( $item['callers'] ) - 3;
-			if ( $extra > 0 ) {
-				$out .= sprintf( "        \033[2m… and %d more call site(s)\033[0m\n", $extra );
-			}
 		}
 
 		fwrite( STDERR, $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 	}
-
-	/**
-	 * Keep the last few frames of a caller chain; the bootstrap prefix is noise.
-	 *
-	 * @param string $caller Comma separated caller chain from $wpdb->queries.
-	 *
-	 * @return string
-	 */
-	private function short_caller( string $caller ): string {
-		$frames = array_map( 'trim', explode( ',', $caller ) );
-
-		// Drop wrappers that say nothing about which code issued the query.
-		$frames = array_values(
-			array_filter(
-				$frames,
-				static function ( $frame ) {
-					return ! preg_match( '/^(require|require_once|include|include_once)\b|^option_value$/', $frame );
-				}
-			)
-		);
-
-		return implode( ' → ', array_slice( $frames, -3 ) );
-	}
-
 }

@@ -180,6 +180,6 @@ if ( ! function_exists( 'debugger_format_variable' ) ) {
 			$result .= $message . PHP_EOL;
 		}
 
-		return (string) $result;
+		return $result;
 	}
 }
