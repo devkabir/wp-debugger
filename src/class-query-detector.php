@@ -61,7 +61,9 @@ class Query_Detector {
 				return $b['count'] <=> $a['count'];
 			}
 		);
-		write_log( sprintf( 'N+1: %d pattern(s) repeated >= %d times.', count( $flagged ), $threshold ), $flagged );
+		$log = new Log( 'query-detector.log' );
+		$log->write( sprintf( 'N+1: %d pattern(s) repeated >= %d times.', count( $flagged ), $threshold ) );
+		$log->write( $flagged );
 
 		if ( is_terminal_request() ) {
 			$this->report_cli( $flagged );
