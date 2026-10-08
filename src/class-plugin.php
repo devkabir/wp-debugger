@@ -23,6 +23,7 @@ class Plugin {
 	public function __construct() {
 		new Http();
 		new Error_Page();
+		new Query_Detector();
 		$this->register_ajax_handlers();
 	}
 
