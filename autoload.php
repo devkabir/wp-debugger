@@ -27,12 +27,9 @@ spl_autoload_register(
 			// Build the full file path.
 			$file = __DIR__ . '/src/class-' . strtolower(str_replace('_', '-', $relative_class)) . '.php';
 
-			// Include the file if it exists.
-			if (!file_exists($file)) {
-				echo $file;
-				exit;
+			if (file_exists($file)) {
+				require_once $file;
 			}
-			require_once $file;
 		}
 	}
 );

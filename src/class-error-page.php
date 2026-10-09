@@ -84,19 +84,6 @@ class Error_Page {
 			return;
 		}
 
-		// Check if this trigger point should be ignored
-		if ( Ignored_Triggers::should_ignore( $throwable->getFile(), $throwable->getLine() ) ) {
-			error_log( // phpcs:ignore
-				sprintf(
-					'[WP Debugger] Ignored error at %s:%d - %s',
-					$throwable->getFile(),
-					$throwable->getLine(),
-					$throwable->getMessage()
-				)
-			);
-			return;
-		}
-
 		$this->handling = true;
 		$this->clean_output_buffers();
 		$this->send_http_status();
@@ -170,7 +157,7 @@ class Error_Page {
 				'message'  => $throwable->getMessage(),
 				'file'     => $throwable->getFile(),
 				'line'     => $throwable->getLine(),
-				'trace'    => format_stack_trace( $throwable->getTrace() ),
+				'trace'    => debugger_trace_summary( $throwable->getTrace() ),
 				'previous' => $throwable->getPrevious(),
 			),
 			JSON_PRETTY_PRINT
@@ -392,11 +379,10 @@ class Error_Page {
 	 * @param mixed $data Input data.
 	 * @param int $limit Maximum items to keep per level.
 	 * @param int $depth Current recursion depth.
-	 * @param bool $filter_empty Whether to filter empty array elements (defaults to false).
 	 *
 	 * @return mixed Processed data.
 	 */
-	private function process_array_value( $data, int $limit = 0, int $depth = 0, bool $filter_empty = false ) {
+	private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
 		// Prevent excessive recursion depth.
 		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
 			return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
@@ -425,16 +411,10 @@ class Error_Page {
 
 		// Process nested values.
 		foreach ( $data as $key => $value ) {
-			$processed = $this->process_array_value( $value, $limit, $depth + 1, $filter_empty );
-
-			if ( $filter_empty && is_array( $processed ) && empty( $processed ) ) {
-				unset( $data[ $key ] );
-			} else {
-				$data[ $key ] = $processed;
-			}
+			$data[ $key ] = $this->process_array_value( $value, $limit, $depth + 1 );
 		}
 
-		return $filter_empty ? array_filter( $data ) : $data;
+		return $data;
 	}
 
 	/**

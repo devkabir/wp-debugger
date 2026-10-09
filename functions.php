@@ -15,13 +15,13 @@ function write_log( ...$messages ) {
 }
 
 /**
- * Format stack trace.
+ * Format a stack trace into a compact file:line keyed summary.
  *
  * @param array $trace The stack trace.
  *
  * @return array The formatted trace.
  */
-function format_stack_trace( array $trace ): array {
+function debugger_trace_summary( array $trace ): array {
 	$formatted_trace = array();
 	foreach ( $trace as $value ) {
 		if ( ! isset( $value['file'] ) ) {
@@ -39,18 +39,6 @@ function format_stack_trace( array $trace ): array {
 	}
 
 	return $formatted_trace;
-}
-
-/**
- * Log stack trace.
- *
- * @param array $trace The stack trace.
- *
- * @return void
- * @throws Exception
- */
-function log_stack_trace( array $trace ) {
-	write_log( format_stack_trace( $trace ) );
 }
 
 /**
