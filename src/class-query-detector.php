@@ -10,6 +10,10 @@ class Query_Detector {
 	 * Hook the detector into shutdown.
 	 */
 	public function __construct() {
+		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( 'Pest\TestSuite', false ) ) {
+			return;
+		}
+
 		if ( ! defined( 'SAVEQUERIES' ) || ! SAVEQUERIES ) {
 			define( 'SAVEQUERIES', true );
 		}
