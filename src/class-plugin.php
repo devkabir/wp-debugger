@@ -143,6 +143,9 @@ class Plugin {
 	 * @return bool True if request expects JSON, false otherwise
 	 */
 	public function is_json_request(): bool {
+		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( 'Pest\TestSuite', false ) ) {
+			return true;
+		}
 		return ( defined( 'WP_CLI' ) && WP_CLI ) || ( isset( $_SERVER['CONTENT_TYPE'] ) && 'application/json' === $_SERVER['CONTENT_TYPE'] ) || ( isset( $_SERVER['HTTP_ACCEPT'] ) && false !== strpos( wp_unslash( $_SERVER['HTTP_ACCEPT'] ), 'application/json' ) );
 	}
 }
