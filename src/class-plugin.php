@@ -130,9 +130,7 @@ class Plugin {
 	 * @return Plugin The instance of this plugin.
 	 */
 	public static function get_instance(): Plugin {
-		if ( ! isset( self::$instance ) ) {
-			self::$instance = new self();
-		}
+		self::$instance ??= new self();
 
 		return self::$instance;
 	}
@@ -143,9 +141,9 @@ class Plugin {
 	 * @return bool True if request expects JSON, false otherwise
 	 */
 	public function is_json_request(): bool {
-		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( 'Pest\TestSuite', false ) ) {
+		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( \Pest\TestSuite::class, false ) ) {
 			return true;
 		}
-		return ( defined( 'WP_CLI' ) && WP_CLI ) || ( isset( $_SERVER['CONTENT_TYPE'] ) && 'application/json' === $_SERVER['CONTENT_TYPE'] ) || ( isset( $_SERVER['HTTP_ACCEPT'] ) && false !== strpos( wp_unslash( $_SERVER['HTTP_ACCEPT'] ), 'application/json' ) );
+		return ( defined( 'WP_CLI' ) && WP_CLI ) || ( isset( $_SERVER['CONTENT_TYPE'] ) && 'application/json' === $_SERVER['CONTENT_TYPE'] ) || ( isset( $_SERVER['HTTP_ACCEPT'] ) && str_contains( wp_unslash( $_SERVER['HTTP_ACCEPT'] ), 'application/json' ) );
 	}
 }

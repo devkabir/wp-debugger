@@ -1,35 +1,25 @@
 <?php
 /**
- * This script dynamically loads all classes in the `src` directory
- * following the PSR-4 standard.
+ * Loads DevKabir\WPDebugger classes from src/ using WordPress file naming: Foo_Bar => src/class-foo-bar.php.
  *
- * @package MyProject
+ * @package DevKabir\WPDebugger
  */
 
 // Exit if accessed directly.
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-/**
- * Autoloader function for classes in the `src` directory.
- *
- * @param string $class The fully qualified class name.
- */
 spl_autoload_register(
-	static function ($class_name) {
-		// Base namespace for the plugin.
+	static function ( $class_name ) {
 		$namespace = 'DevKabir\\WPDebugger\\';
 
-		// Ensure the class belongs to this namespace.
-		if (strpos($class_name, $namespace) === 0) {
-			// Replace namespace separators with directory separators.
-			$relative_class = str_replace(array($namespace, '\\'), array('', DIRECTORY_SEPARATOR), $class_name);
+		if ( ! str_starts_with( $class_name, $namespace ) ) {
+			return;
+		}
 
-			// Build the full file path.
-			$file = __DIR__ . '/src/class-' . strtolower(str_replace('_', '-', $relative_class)) . '.php';
+		$file = __DIR__ . '/src/class-' . strtolower( str_replace( array( '_', '\\' ), array( '-', '/' ), substr( $class_name, strlen( $namespace ) ) ) ) . '.php';
 
-			if (file_exists($file)) {
-				require_once $file;
-			}
+		if ( file_exists( $file ) ) {
+			require_once $file;
 		}
 	}
 );

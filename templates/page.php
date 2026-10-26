@@ -10,16 +10,16 @@ if ( ! function_exists( 'get_args_preview' ) ) {
 			} elseif ( is_numeric( $arg ) ) {
 				$preview[] = (string) $arg;
 			} elseif ( is_string( $arg ) ) {
-				$truncated = strlen( $arg ) > 15 ? substr( $arg, 0, 12 ) . '...' : $arg;
+				$truncated = strlen( $arg ) > 15 ? substr( $arg, 0, 12 ) . '…' : $arg;
 				$preview[] = '"' . $truncated . '"';
 			} elseif ( is_array( $arg ) ) {
-				$preview[] = empty( $arg ) ? '[]' : '[...]';
+				$preview[] = empty( $arg ) ? '[]' : '[…]';
 			} else {
 				$preview[] = gettype( $arg );
 			}
 		}
 		$joined = implode( ', ', $preview );
-		return strlen( $joined ) > 30 ? substr( $joined, 0, 27 ) . '...' : $joined;
+		return strlen( $joined ) > 30 ? substr( $joined, 0, 27 ) . '…' : $joined;
 	}
 }
 
@@ -38,6 +38,22 @@ if ( ! function_exists( 'get_display_path' ) ) {
 		return $path;
 	}
 }
+
+// $_REQUEST is what Error_Page sends; $_SERVER always has a tab.
+$tab_labels = array(
+	'$_REQUEST' => 'Request',
+	'$_FILES'   => 'Files',
+	'$_COOKIE'  => 'Cookies',
+	'$_SESSION' => 'Session',
+	'$_SERVER'  => 'Server',
+);
+$tab_keys   = array_values(
+	array_filter(
+		array_keys( $tab_labels ),
+		static fn( $key ) => '$_SERVER' === $key || ! empty( $superglobals[ $key ] )
+	)
+);
+$active_tab = $tab_keys[0];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,665 +61,693 @@ if ( ! function_exists( 'get_display_path' ) ) {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>WordPress Debugger - Error Encountered</title>
+	<meta name="robots" content="noindex">
+	<title>
+		<?php echo esc_html( $type . ': ' . $message ); ?>
+	</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link
-		href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+		href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap"
 		rel="stylesheet">
 	<style>
 		:root {
-			--bg-color: #090d16;
-			--card-bg: #121824;
-			--card-border: #1e293b;
-			--card-hover-bg: #1a2336;
-			--text-main: #f8fafc;
-			--text-muted: #94a3b8;
-			--accent-red: #f87171;
-			--accent-red-hover: #ef4444;
-			--accent-red-bg: #450a0a;
-			--accent-red-border: #7f1d1d;
-			--accent-indigo: #818cf8;
-			--accent-indigo-hover: #6366f1;
-			--accent-indigo-bg: #1e1b4b;
-			--accent-indigo-border: #312e81;
-			--accent-warning: #fb923c;
-			--accent-warning-hover: #f97316;
-			--accent-warning-bg: #431407;
-			--accent-warning-border: #7c2d12;
-			--code-bg: #090d16;
-			--font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-			--font-mono: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace
+			color-scheme: dark;
+			--space-3xs: 2px;
+			--space-2xs: 4px;
+			--space-xs: 8px;
+			--space-sm: 12px;
+			--space-md: 16px;
+			--space-lg: 24px;
+			--space-xl: 40px;
+			--text-xs: 0.75rem;
+			--text-sm: 0.875rem;
+			--text-md: 1rem;
+			--text-lg: 1.2rem;
+			--text-display: 1.728rem;
+			--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+			--dur-micro: 120ms;
+			--dur-short: 220ms;
+			--container: 1440px;
+			--gutter: 32px;
+			--z-screen: 100000;
+			--z-toast: 100001;
+			--color-paper: oklch(17% 0.008 250);
+			--color-paper-2: oklch(21% 0.009 250);
+			--color-paper-3: oklch(13.5% 0.007 250);
+			--color-ink: oklch(95% 0.005 250);
+			--color-ink-2: oklch(83% 0.008 250);
+			--color-muted: oklch(71% 0.01 250);
+			--color-rule: oklch(31% 0.01 250);
+			--color-rule-2: oklch(42% 0.012 250);
+			--color-accent: oklch(82% 0.15 80);
+			--color-accent-ink: oklch(18% 0.04 75);
+			--color-focus: oklch(82% 0.15 80);
+			--color-cool: oklch(77% 0.12 245);
+			--color-cool-soft: oklch(29% 0.05 245);
+			--color-ok: oklch(76% 0.15 150);
+			--color-bad: oklch(70% 0.17 25);
+			--color-bad-soft: oklch(24.5% 0.035 25);
+			--font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+			--font-body: var(--font-display);
+			--font-outlier: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+			--radius-card: 10px;
+			--radius-pill: 6px;
+			--radius-chip: 4px;
+			--rule-hair: 1px;
+			--tracking-display: -0.03em;
+			--display-weight: 500;
 		}
 
-		* {
+		@media (prefers-color-scheme: light) {
+			:root {
+				color-scheme: light;
+				--color-paper: oklch(98% 0.006 85);
+				--color-paper-2: oklch(100% 0 0);
+				--color-paper-3: oklch(95.5% 0.008 85);
+				--color-ink: oklch(19% 0.01 60);
+				--color-ink-2: oklch(32% 0.01 60);
+				--color-muted: oklch(46% 0.012 60);
+				--color-rule: oklch(88% 0.008 85);
+				--color-rule-2: oklch(76% 0.01 85);
+				--color-accent: oklch(50% 0.13 70);
+				--color-accent-ink: oklch(99% 0.005 85);
+				--color-focus: oklch(50% 0.13 70);
+				--color-cool: oklch(50% 0.14 250);
+				--color-cool-soft: oklch(93% 0.03 250);
+				--color-ok: oklch(50% 0.13 150);
+				--color-bad: oklch(50% 0.18 25);
+				--color-bad-soft: oklch(94% 0.03 25);
+			}
+		}
+
+		*,
+		*::before,
+		*::after {
 			box-sizing: border-box;
-			margin: 0;
-			padding: 0
+		}
+
+		html,
+		body {
+			overflow-x: clip;
+		}
+
+		html {
+			scrollbar-color: var(--color-rule-2) var(--color-paper);
 		}
 
 		body {
-			background-color: var(--bg-color);
-			color: var(--text-main);
-			font-family: var(--font-sans);
-			line-height: 1.4;
-			padding: 1rem;
-			min-height: 100vh
+			margin: 0;
+			background: var(--color-paper);
+			color: var(--color-ink);
+			font-family: var(--font-body);
+			font-size: var(--text-md);
+			line-height: 1.55;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		::selection {
+			background: color-mix(in oklab, var(--color-accent) 25%, transparent);
+		}
+
+		:focus-visible {
+			outline: 2px solid var(--color-focus);
+			outline-offset: 2px;
+		}
+
+		h1,
+		h2 {
+			margin: 0;
+			color: var(--color-ink);
+			font-family: var(--font-display);
+			font-weight: var(--display-weight);
+			letter-spacing: var(--tracking-display);
+			line-height: 1.1;
+			overflow-wrap: break-word;
+			min-width: 0;
+			text-wrap: balance;
+		}
+
+		p {
+			margin: 0;
+		}
+
+		svg {
+			display: block;
+		}
+
+		button {
+			font: inherit;
+		}
+
+		@media (max-width: 40rem) {
+			:root {
+				--gutter: 16px;
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+
+			*,
+			*::before,
+			*::after {
+				transition-duration: 0.01ms !important;
+				scroll-behavior: auto !important;
+			}
+		}
+
+		/* A fatal can land after WordPress already printed a page (wp-admin), so the screen covers it instead of trailing it. */
+		.screen {
+			position: fixed;
+			inset: 0;
+			z-index: var(--z-screen);
+			overflow-y: auto;
+			padding-block: var(--space-lg);
+			background: var(--color-paper);
+			color: var(--color-ink);
+			font-family: var(--font-body);
+			font-size: var(--text-md);
+			line-height: 1.55;
+			text-align: left;
 		}
 
 		.container {
-			max-width: 1400px;
-			margin: 0 auto;
 			display: flex;
 			flex-direction: column;
-			gap: 0.75rem
+			gap: var(--space-md);
+			width: 100%;
+			max-width: var(--container);
+			margin-inline: auto;
+			padding-inline: var(--gutter);
 		}
 
 		.error-header {
-			background: linear-gradient(135deg, var(--card-bg) 0%, #151d2d 100%);
-			border: 1px solid var(--card-border);
-			border-left: 4px solid var(--accent-red);
-			border-radius: 8px;
-			padding: 0.75rem 1rem;
-			box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-			backdrop-filter: blur(10px);
 			display: flex;
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-			gap: 0.75rem;
 			flex-wrap: wrap;
-			position: relative;
-			overflow: hidden
-		}
-
-		.error-header::after {
-			content: '';
-			position: absolute;
-			top: 0;
-			right: 0;
-			width: 100px;
-			height: 100px;
-			background: radial-gradient(circle, rgba(248, 113, 113, .08) 0%, transparent 70%);
-			pointer-events: none
-		}
-
-		.error-header.warning {
-			border-left-color: var(--accent-warning)
-		}
-
-		.error-header.warning::after {
-			background: radial-gradient(circle, rgba(251, 146, 60, .08) 0%, transparent 70%)
-		}
-
-		.error-header.notice,
-		.error-header.deprecated,
-		.error-header.strict-notice {
-			border-left-color: var(--accent-indigo)
-		}
-
-		.error-header.notice::after,
-		.error-header.deprecated::after,
-		.error-header.strict-notice::after {
-			background: radial-gradient(circle, rgba(129, 140, 248, .08) 0%, transparent 70%)
+			align-items: flex-end;
+			justify-content: space-between;
+			gap: var(--space-md) var(--space-lg);
+			padding: var(--space-lg);
+			background: var(--color-paper-2);
+			border: var(--rule-hair) solid var(--color-rule);
+			border-radius: var(--radius-card);
 		}
 
 		.error-info {
 			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-			flex-wrap: wrap;
-			flex: 1;
-			min-width: 300px
-		}
-
-		.error-badge {
-			background-color: var(--accent-red-bg);
-			border: 1px solid var(--accent-red-border);
-			color: var(--accent-red);
-			padding: 0.15rem 0.4rem;
-			border-radius: 9999px;
-			font-size: 0.65rem;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.05em
-		}
-
-		.error-badge.warning {
-			background-color: var(--accent-warning-bg);
-			border-color: var(--accent-warning-border);
-			color: var(--accent-warning)
-		}
-
-		.error-badge.notice,
-		.error-badge.deprecated,
-		.error-badge.strict-notice {
-			background-color: var(--accent-indigo-bg);
-			border-color: var(--accent-indigo-border);
-			color: var(--accent-indigo)
+			flex: 1 1 32rem;
+			flex-direction: column;
+			gap: var(--space-xs);
+			min-width: 0;
 		}
 
 		.error-title {
-			font-size: 1.1rem;
-			font-weight: 800;
-			color: var(--text-main);
-			word-break: break-word;
-			line-height: 1.2
+			max-width: 60ch;
+			font-size: var(--text-display);
 		}
 
 		.error-meta {
-			font-family: var(--font-mono);
-			font-size: 0.75rem;
-			color: var(--accent-red);
-			background-color: rgba(248, 113, 113, .04);
-			padding: 0.2rem 0.5rem;
-			border-radius: 4px;
-			border: 1px dashed rgba(248, 113, 113, .2);
-			display: inline-flex;
+			display: flex;
+			flex-wrap: wrap;
 			align-items: center;
-			gap: 0.25rem;
-			word-break: break-all
+			gap: var(--space-2xs) var(--space-sm);
+			font-size: var(--text-sm);
 		}
 
-		.error-meta.warning {
-			color: var(--accent-warning);
-			background-color: rgba(251, 146, 60, .04);
-			border-color: rgba(251, 146, 60, .2)
+		.error-type {
+			color: var(--color-bad);
+			font-weight: 500;
 		}
 
-		.error-meta.notice,
-		.error-meta.deprecated,
-		.error-meta.strict-notice {
-			color: var(--accent-indigo);
-			background-color: rgba(129, 140, 248, .04);
-			border-color: rgba(129, 140, 248, .2)
+		.error-where {
+			min-width: 0;
+			font-family: var(--font-outlier);
+			color: var(--color-ink-2);
+			overflow-wrap: anywhere;
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.actions-bar {
 			display: flex;
-			justify-content: flex-end;
-			gap: 0.5rem;
-			flex-wrap: wrap
+			flex-wrap: wrap;
+			gap: var(--space-xs);
 		}
 
 		.btn {
 			display: inline-flex;
 			align-items: center;
-			gap: 0.375rem;
-			padding: 0.5rem 1rem;
-			border-radius: 6px;
-			font-weight: 600;
-			font-size: 0.8rem;
+			gap: var(--space-xs);
+			min-height: 40px;
+			padding: var(--space-xs) var(--space-md);
+			border: var(--rule-hair) solid var(--color-rule-2);
+			border-radius: var(--radius-pill);
+			background: var(--color-paper-2);
+			color: var(--color-ink);
+			font-size: var(--text-sm);
+			font-weight: 500;
 			cursor: pointer;
-			transition: all .2s ease;
-			text-decoration: none;
-			border: 1px solid transparent
+			transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
 		}
 
-		.btn-indigo {
-			background-color: var(--accent-indigo-bg);
-			color: var(--accent-indigo);
-			border-color: var(--accent-indigo-border)
+		.btn:hover {
+			background: var(--color-rule);
 		}
 
-		.btn-indigo:hover {
-			background-color: var(--accent-indigo);
-			color: var(--bg-color);
-			box-shadow: 0 0 12px rgba(129, 140, 248, .3);
-			transform: translateY(-1px)
+		.btn:active {
+			background: var(--color-paper-3);
 		}
 
-		.btn-red {
-			background-color: var(--accent-red-bg);
-			color: var(--accent-red);
-			border-color: var(--accent-red-border)
+		.btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
 		}
 
-		.btn-red:hover {
-			background-color: var(--accent-red);
-			color: var(--bg-color);
-			box-shadow: 0 0 12px rgba(248, 113, 113, .3);
-			transform: translateY(-1px)
+		.btn--primary {
+			border-color: var(--color-accent);
+			background: var(--color-accent);
+			color: var(--color-accent-ink);
+		}
+
+		.btn--primary:hover {
+			border-color: var(--color-accent);
+			background: color-mix(in oklab, var(--color-accent) 85%, var(--color-ink));
+		}
+
+		.btn--primary:active {
+			background: color-mix(in oklab, var(--color-accent) 80%, var(--color-paper));
 		}
 
 		.btn-copy-path {
-			background: none;
-			border: none;
-			color: var(--text-muted);
+			position: relative;
+			display: inline-grid;
+			flex: none;
+			place-items: center;
+			width: 32px;
+			height: 32px;
+			padding: 0;
+			border: 0;
+			border-radius: var(--radius-pill);
+			background: transparent;
+			color: var(--color-muted);
 			cursor: pointer;
-			padding: 0.15rem;
-			border-radius: 4px;
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			text-decoration: none
+			transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+		}
+
+		.btn-copy-path::before {
+			content: "";
+			position: absolute;
+			inset: -6px;
 		}
 
 		.btn-copy-path:hover {
-			color: var(--text-main);
-			background-color: rgba(255, 255, 255, .1)
+			background: var(--color-rule);
+			color: var(--color-ink);
 		}
 
+		.btn-copy-path:active {
+			background: var(--color-paper-3);
+		}
+
+		/* One surface cut by 1px seams: the rule colour shows through the grid gap. */
 		.workspace {
 			display: grid;
-			grid-template-columns: 380px 1fr;
-			gap: 0.75rem;
-			min-height: 450px
+			grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+			gap: var(--rule-hair);
+			overflow: hidden;
+			background: var(--color-rule);
+			border: var(--rule-hair) solid var(--color-rule);
+			border-radius: var(--radius-card);
 		}
 
-		@media (max-width:1024px) {
-			.workspace {
-				grid-template-columns: 1fr
-			}
+		.workspace-main {
+			display: grid;
+			grid-template-rows: minmax(0, 1fr) auto;
+			gap: var(--rule-hair);
+			min-width: 0;
 		}
 
 		.workspace-panel {
-			background-color: var(--card-bg);
-			border: 1px solid var(--card-border);
-			border-radius: 8px;
-			overflow: hidden;
 			display: flex;
 			flex-direction: column;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, .15)
+			min-width: 0;
+			background: var(--color-paper-2);
+		}
+
+		@media (max-width: 64rem) {
+			.workspace {
+				grid-template-columns: minmax(0, 1fr);
+			}
 		}
 
 		.panel-header {
-			padding: 0.625rem 0.875rem;
-			border-bottom: 1px solid var(--card-border);
-			background-color: rgba(255, 255, 255, .02);
 			display: flex;
+			align-items: center;
 			justify-content: space-between;
-			align-items: center
+			gap: var(--space-sm);
+			min-height: 48px;
+			padding: var(--space-xs) var(--space-md);
+			border-bottom: var(--rule-hair) solid var(--color-rule);
+		}
+
+		.panel-title {
+			min-width: 0;
+			font-size: var(--text-sm);
+			font-weight: 500;
+			letter-spacing: 0;
+			color: var(--color-ink-2);
+			overflow-wrap: anywhere;
+		}
+
+		.panel-title--path {
+			font-family: var(--font-outlier);
+			font-weight: 400;
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.panel-actions {
 			display: inline-flex;
-			align-items: center;
-			gap: 0.25rem
-		}
-
-		.panel-title {
-			font-size: 0.875rem;
-			font-weight: 700;
-			color: var(--text-main);
-			letter-spacing: 0.02em
+			gap: var(--space-2xs);
 		}
 
 		.trace-list {
-			overflow-y: auto;
-			max-height: 500px;
 			display: flex;
-			flex-direction: column
+			flex-direction: column;
+			max-height: 36rem;
+			overflow-y: auto;
 		}
 
 		.trace-item {
-			padding: 0.625rem 0.875rem;
-			border-bottom: 1px solid var(--card-border);
-			cursor: pointer;
-			transition: all .2s ease;
-			text-align: left;
-			background: none;
-			border: none;
-			border-left: 3px solid transparent;
 			display: flex;
 			flex-direction: column;
-			gap: 0.25rem
+			gap: var(--space-3xs);
+			width: 100%;
+			padding: var(--space-sm) var(--space-md);
+			border: 0;
+			border-bottom: var(--rule-hair) solid var(--color-rule);
+			background: transparent;
+			color: inherit;
+			text-align: left;
+			cursor: pointer;
+			transition: background-color var(--dur-micro) var(--ease-out);
 		}
 
 		.trace-item:hover {
-			background-color: var(--card-hover-bg)
+			background: var(--color-paper);
+		}
+
+		.trace-item:active {
+			background: var(--color-paper-3);
 		}
 
 		.trace-item.active {
-			background-color: rgba(129, 140, 248, .06);
-			border-left-color: var(--accent-indigo)
+			background: var(--color-cool-soft);
+		}
+
+		.trace-item:focus-visible,
+		.tab-btn:focus-visible {
+			outline-offset: -2px;
 		}
 
 		.trace-item-header {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			gap: 0.5rem
+			gap: var(--space-xs);
 		}
 
 		.trace-index {
-			font-family: var(--font-mono);
-			font-size: 0.7rem;
-			color: var(--accent-indigo);
-			font-weight: 600
+			font-family: var(--font-outlier);
+			font-size: var(--text-xs);
+			color: var(--color-cool);
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.trace-trigger-badge {
-			background-color: var(--accent-red-bg);
-			color: var(--accent-red);
-			font-size: 0.6rem;
-			font-weight: 700;
-			padding: 0.05rem 0.3rem;
-			border-radius: 3px;
-			text-transform: uppercase
+			padding: 0 var(--space-2xs);
+			border: var(--rule-hair) solid var(--color-bad);
+			border-radius: var(--radius-chip);
+			background: var(--color-bad-soft);
+			color: var(--color-bad);
+			font-size: var(--text-xs);
+			font-weight: 500;
 		}
 
 		.trace-func {
-			font-family: var(--font-mono);
-			font-size: 0.8rem;
-			font-weight: 500;
-			color: var(--text-main);
-			word-break: break-all
+			font-family: var(--font-outlier);
+			font-size: var(--text-sm);
+			color: var(--color-ink);
+			overflow-wrap: anywhere;
+		}
+
+		.trace-arg-preview {
+			color: var(--color-muted);
 		}
 
 		.trace-file-info {
-			font-size: 0.7rem;
-			color: var(--text-muted);
-			word-break: break-all
-		}
-
-		.code-viewer-panel {
-			flex-grow: 1
-		}
-
-		.workspace-main {
-			display: flex;
-			flex-direction: column;
-			gap: 0.75rem;
-			min-width: 0;
-		}
-
-		.arguments-panel {
-			display: flex;
-			flex-direction: column;
-		}
-
-		.arguments-content {
-			padding: 1rem;
-			overflow-y: auto;
-			max-height: 250px;
-		}
-
-		.arg-row {
-			border-bottom: 1px dashed var(--card-border);
-			padding-bottom: 0.5rem;
-			margin-bottom: 0.5rem;
-		}
-
-		.arg-row:last-child {
-			border-bottom: none;
-			padding-bottom: 0;
-			margin-bottom: 0;
+			font-family: var(--font-outlier);
+			font-size: var(--text-xs);
+			color: var(--color-muted);
+			overflow-wrap: anywhere;
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.code-container {
-			position: relative;
-			flex-grow: 1;
-			background-color: var(--code-bg);
+			flex: 1;
+			max-height: 36rem;
 			overflow: auto;
-			max-height: 500px;
-			font-family: var(--font-mono);
-			font-size: 0.8rem;
-			--code-line-height: 1.45rem
+			background: var(--color-paper-3);
+			font-family: var(--font-outlier);
+			font-size: var(--text-sm);
+			--code-line-height: 1.6rem;
 		}
 
 		.line-numbers {
-			display: none
+			display: none;
 		}
 
 		.code-lines {
-			padding: 0.75rem 0;
 			min-width: max-content;
-			overflow: hidden;
+			margin: 0;
+			padding: var(--space-sm) 0;
+			font: inherit;
+			line-height: var(--code-line-height);
 			white-space: pre;
-			line-height: var(--code-line-height)
 		}
 
 		.code-row {
 			display: grid;
-			grid-template-columns: 4.5rem minmax(0, 1fr);
+			grid-template-columns: 4rem minmax(0, 1fr);
 			min-height: var(--code-line-height);
-			line-height: var(--code-line-height)
 		}
 
 		.code-row-number {
-			padding: 0 0.5rem;
-			border-right: 1px solid var(--card-border);
+			padding-inline: var(--space-xs) var(--space-sm);
 			text-align: right;
+			color: var(--color-muted);
 			user-select: none;
-			color: #4b5563;
-			background-color: rgba(0, 0, 0, .15);
-			font-weight: 400
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.code-line {
-			padding: 0 0.875rem;
 			display: block;
-			color: #e2e8f0
+			padding-inline: var(--space-md);
+			color: var(--color-ink-2);
+			tab-size: 4;
 		}
 
 		.code-row.highlight {
-			background-color: rgba(239, 68, 68, .12);
+			background: var(--color-bad-soft);
 		}
 
 		.code-row.highlight .code-row-number {
-			color: var(--accent-red);
-			font-weight: 700
+			color: var(--color-bad);
 		}
 
 		.code-row.highlight .code-line {
-			border-left: 3px solid var(--accent-red);
-			padding-left: calc(0.875rem - 3px);
-			color: #fca5a5
+			color: var(--color-ink);
+		}
+
+		.arguments-content {
+			max-height: 16rem;
+			overflow-y: auto;
+			padding: var(--space-md);
+		}
+
+		.arg-list {
+			display: flex;
+			flex-direction: column;
+			gap: var(--space-sm);
+		}
+
+		.arg-row+.arg-row {
+			padding-top: var(--space-sm);
+			border-top: var(--rule-hair) solid var(--color-rule);
+		}
+
+		.arg-label {
+			margin-bottom: var(--space-2xs);
+			font-size: var(--text-xs);
+			font-weight: 500;
+			color: var(--color-muted);
 		}
 
 		.tabs-card {
-			background-color: var(--card-bg);
-			border: 1px solid var(--card-border);
-			border-radius: 8px;
 			overflow: hidden;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, .15)
+			background: var(--color-paper-2);
+			border: var(--rule-hair) solid var(--color-rule);
+			border-radius: var(--radius-card);
 		}
 
 		.tabs-header {
 			display: flex;
-			border-bottom: 1px solid var(--card-border);
-			background-color: rgba(255, 255, 255, .02);
-			overflow-x: auto
+			overflow-x: auto;
+			border-bottom: var(--rule-hair) solid var(--color-rule);
 		}
 
 		.tab-btn {
-			padding: 0.625rem 1rem;
-			background: none;
-			border: none;
+			min-height: 44px;
+			padding: 0 var(--space-md);
+			border: 0;
 			border-bottom: 2px solid transparent;
-			color: var(--text-muted);
-			font-weight: 600;
-			font-size: 0.8rem;
+			background: transparent;
+			color: var(--color-muted);
+			font-size: var(--text-sm);
+			font-weight: 500;
+			white-space: nowrap;
 			cursor: pointer;
-			transition: all .2s ease;
-			white-space: nowrap
+			transition: color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
 		}
 
 		.tab-btn:hover {
-			color: var(--text-main);
-			background-color: rgba(255, 255, 255, .01)
+			color: var(--color-ink);
+		}
+
+		.tab-btn:active {
+			background: var(--color-paper-3);
 		}
 
 		.tab-btn.active {
-			color: var(--accent-indigo);
-			border-bottom-color: var(--accent-indigo);
-			background-color: rgba(129, 140, 248, .02)
+			border-bottom-color: var(--color-cool);
+			color: var(--color-ink);
 		}
 
 		.tab-content {
-			padding: 1rem;
 			display: none;
+			max-height: 24rem;
 			overflow-y: auto;
-			max-height: 400px
+			padding: var(--space-md);
 		}
 
 		.tab-content.active {
-			display: block
+			display: block;
 		}
 
-		.tree-node {
-			margin-left: 1rem;
-			font-family: var(--font-mono);
-			font-size: 0.8rem;
-			line-height: 1.4
+		.tree-node,
+		.tree-leaf {
+			margin-left: var(--space-md);
+			font-family: var(--font-outlier);
+			font-size: var(--text-sm);
+			line-height: 1.6;
+			overflow-wrap: anywhere;
 		}
 
 		.tree-node-trigger {
-			cursor: pointer;
-			user-select: none;
-			color: var(--accent-indigo);
 			display: inline-flex;
 			align-items: center;
-			gap: 0.2rem
+			gap: var(--space-2xs);
+			padding: 0 var(--space-2xs);
+			border: 0;
+			border-radius: var(--radius-chip);
+			background: transparent;
+			color: inherit;
+			font: inherit;
+			text-align: left;
+			cursor: pointer;
+			transition: background-color var(--dur-micro) var(--ease-out);
+		}
+
+		.tree-node-trigger:hover {
+			background: var(--color-rule);
+		}
+
+		.tree-node-trigger:active {
+			background: var(--color-paper-3);
 		}
 
 		.tree-node-trigger::before {
-			content: '▶';
-			display: inline-block;
-			font-size: 0.55rem;
-			transition: transform .2s ease;
-			color: var(--text-muted)
+			content: "▸";
+			color: var(--color-muted);
+			transition: transform var(--dur-micro) var(--ease-out);
 		}
 
 		.tree-node.expanded>.tree-node-trigger::before {
-			transform: rotate(90deg)
+			transform: rotate(90deg);
 		}
 
 		.tree-node-children {
 			display: none;
-			border-left: 1px dashed var(--card-border);
-			margin-left: 0.375rem;
-			padding-left: 0.375rem
+			margin-left: var(--space-2xs);
+			padding-left: var(--space-2xs);
+			border-left: var(--rule-hair) solid var(--color-rule);
 		}
 
 		.tree-node.expanded>.tree-node-children {
-			display: block
-		}
-
-		.tree-leaf {
-			font-family: var(--font-mono);
-			font-size: 0.8rem;
-			margin-left: 1rem;
-			line-height: 1.4;
-			word-break: break-all
+			display: block;
 		}
 
 		.tree-key {
-			color: #f472b6
+			color: var(--color-ink-2);
+		}
+
+		.tree-count,
+		.tree-value-null {
+			color: var(--color-muted);
 		}
 
 		.tree-value-string {
-			color: #34d399
+			color: var(--color-cool);
 		}
 
-		.tree-value-number {
-			color: #fb7185
-		}
-
+		.tree-value-number,
 		.tree-value-boolean {
-			color: #60a5fa
-		}
-
-		.tree-value-null {
-			color: #94a3b8;
-			font-style: italic
+			color: var(--color-ink);
+			font-variant-numeric: tabular-nums slashed-zero;
 		}
 
 		.empty-message {
-			color: var(--text-muted);
-			font-style: italic;
-			font-size: 0.8rem
+			color: var(--color-muted);
+			font-size: var(--text-sm);
+		}
+
+		.trace-list>.empty-message {
+			padding: var(--space-md);
 		}
 
 		.toast {
 			position: fixed;
-			bottom: 1rem;
-			right: 1rem;
-			background-color: #1e293b;
-			border: 1px solid var(--accent-indigo-border);
-			color: #e2e8f0;
-			padding: 0.5rem 1rem;
-			border-radius: 6px;
-			box-shadow: 0 10px 25px rgba(0, 0, 0, .3);
+			right: var(--space-md);
+			bottom: var(--space-md);
+			z-index: var(--z-toast);
 			display: flex;
 			align-items: center;
-			gap: 0.375rem;
-			z-index: 9999;
-			transform: translateY(150%);
-			transition: transform .3s cubic-bezier(.16, 1, .3, 1);
-			font-weight: 600;
-			font-size: 0.8rem
+			gap: var(--space-xs);
+			padding: var(--space-xs) var(--space-md);
+			border: var(--rule-hair) solid var(--color-rule-2);
+			border-radius: var(--radius-pill);
+			background: var(--color-paper-2);
+			color: var(--color-ink);
+			font-size: var(--text-sm);
+			font-weight: 500;
+			transform: translateY(calc(100% + var(--space-xl)));
+			transition: transform var(--dur-short) var(--ease-out);
 		}
 
 		.toast.show {
-			transform: translateY(0)
+			transform: none;
 		}
 
 		.toast-icon {
-			color: var(--accent-indigo)
-		}
-
-		@media (prefers-color-scheme:light) {
-			:root {
-				--bg-color: #f8fafc;
-				--card-bg: #ffffff;
-				--card-border: #e2e8f0;
-				--card-hover-bg: #f1f5f9;
-				--text-main: #0f172a;
-				--text-muted: #64748b;
-				--accent-red-bg: #fee2e2;
-				--accent-red-border: #fca5a5;
-				--accent-indigo-bg: #e0e7ff;
-				--accent-indigo-border: #c7d2fe;
-				--accent-warning-bg: #ffedd5;
-				--accent-warning-border: #fed7aa;
-				--code-bg: #f8fafc
-			}
-
-			.error-header {
-				background: linear-gradient(135deg, var(--card-bg) 0%, #f1f5f9 100%)
-			}
-
-			.panel-header {
-				background-color: rgba(0, 0, 0, .02)
-			}
-
-			.btn-copy-path:hover {
-				background-color: rgba(0, 0, 0, 0.05)
-			}
-
-			.code-line {
-				color: #334155
-			}
-
-			.line-numbers,
-			.code-row-number {
-				color: #64748b;
-				background-color: rgba(0, 0, 0, 0.03)
-			}
-
-			.tree-key {
-				color: #c2185b
-			}
-
-			.tree-value-string {
-				color: #0f766e
-			}
-
-			.tree-value-number {
-				color: #be123c
-			}
-
-			.tree-value-boolean {
-				color: #1d4ed8
-			}
-
-			.toast {
-				background-color: #ffffff;
-				color: #0f172a;
-				border-color: var(--card-border)
-			}
+			color: var(--color-ok);
 		}
 	</style>
 	<script>
@@ -786,13 +830,9 @@ if ( ! function_exists( 'get_display_path' ) ) {
 
 		function selectFrame(e) {
 			activeFrameIndex = e;
-			const t = document.querySelectorAll(".trace-item");
-			t.forEach((t, r) => {
-				if (r === e) {
-					t.classList.add("active")
-				} else {
-					t.classList.remove("active")
-				}
+			document.querySelectorAll(".trace-item").forEach((t, r) => {
+				t.classList.toggle("active", r === e);
+				t.setAttribute("aria-current", r === e ? "true" : "false");
 			});
 			const r = wpDebuggerData.stackTrace[e];
 			if (!r) return;
@@ -835,40 +875,33 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			const container = document.getElementById("arguments-content");
 			if (!container) return;
 			container.innerHTML = "";
-			
+
 			if (!args || Object.keys(args).length === 0) {
-				container.innerHTML = '<span class="empty-message">No arguments for this frame.</span>';
+				container.innerHTML = '<p class="empty-message">No arguments for this frame.</p>';
 				return;
 			}
-			
+
 			const list = document.createElement("div");
-			list.style.display = "flex";
-			list.style.flexDirection = "column";
-			list.style.gap = "0.5rem";
-			
+			list.className = "arg-list";
+
 			for (const key in args) {
 				if (args.hasOwnProperty(key)) {
 					const argValue = args[key];
 					const argRow = document.createElement("div");
 					argRow.className = "arg-row";
-					
+
 					const argLabel = document.createElement("div");
-					argLabel.style.fontWeight = "600";
-					argLabel.style.fontSize = "0.75rem";
-					argLabel.style.color = "var(--accent-indigo)";
+					argLabel.className = "arg-label";
 					argLabel.innerText = `Argument #${key}:`;
-					
-					const argValContainer = document.createElement("div");
-					argValContainer.style.paddingLeft = "0.5rem";
-					
+
 					const treeNode = buildTreeHTML(argValue);
 					if (argValue !== null && typeof argValue === "object") {
 						treeNode.classList.add("expanded");
+						treeNode.firstChild.setAttribute("aria-expanded", "true");
 					}
-					
-					argValContainer.appendChild(treeNode);
+
 					argRow.appendChild(argLabel);
-					argRow.appendChild(argValContainer);
+					argRow.appendChild(treeNode);
 					list.appendChild(argRow);
 				}
 			}
@@ -914,28 +947,19 @@ if ( ! function_exists( 'get_display_path' ) ) {
 
 		function ignoreError() {
 			document.cookie = "wp_debugger_ignore=1; path=/; max-age=31536000";
-			showToast("Muted. Reloading...");
+			showToast("Muted. Reloading…");
 			setTimeout(() => {
 				window.location.reload()
 			}, 1000)
 		}
 
 		function switchTab(e) {
-			const t = document.querySelectorAll(".tab-btn");
-			t.forEach(t => {
-				if (t.innerText === e) {
-					t.classList.add("active")
-				} else {
-					t.classList.remove("active")
-				}
+			document.querySelectorAll(".tab-btn").forEach(t => {
+				t.classList.toggle("active", t.dataset.tab === e);
+				t.setAttribute("aria-selected", t.dataset.tab === e ? "true" : "false");
 			});
-			const r = document.querySelectorAll(".tab-content");
-			r.forEach(t => {
-				if (t.id === `tab-content-${e}`) {
-					t.classList.add("active")
-				} else {
-					t.classList.remove("active")
-				}
+			document.querySelectorAll(".tab-content").forEach(t => {
+				t.classList.toggle("active", t.id === `tab-content-${e}`);
 			})
 		}
 
@@ -944,10 +968,13 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			if (!r) return;
 			r.innerHTML = "";
 			if (Object.keys(t).length === 0) {
-				r.innerHTML = '<span class="empty-message">No entries</span>';
+				r.innerHTML = '<p class="empty-message">No entries</p>';
 				return
 			}
 			const o = buildTreeHTML(t);
+			// Open the top level so a tab shows its entries at once.
+			o.classList.add("expanded");
+			o.firstChild.setAttribute("aria-expanded", "true");
 			r.appendChild(o)
 		}
 
@@ -955,8 +982,10 @@ if ( ! function_exists( 'get_display_path' ) ) {
 			const r = document.createElement("div");
 			if (e !== null && typeof e === "object") {
 				r.className = "tree-node";
-				const o = document.createElement("span");
+				const o = document.createElement("button");
+				o.type = "button";
 				o.className = "tree-node-trigger";
+				o.setAttribute("aria-expanded", "false");
 				if (t !== null) {
 					const e = document.createElement("span");
 					e.className = "tree-key";
@@ -966,7 +995,7 @@ if ( ! function_exists( 'get_display_path' ) ) {
 				}
 				const a = Array.isArray(e) ? `Array [${e.length}]` : `Object {${Object.keys(e).length}}`;
 				const oLabel = document.createElement("span");
-				oLabel.style.color = "var(--text-muted)";
+				oLabel.className = "tree-count";
 				oLabel.innerText = a;
 				o.appendChild(oLabel);
 				r.appendChild(o);
@@ -980,7 +1009,7 @@ if ( ! function_exists( 'get_display_path' ) ) {
 				r.appendChild(n);
 				o.addEventListener("click", e => {
 					e.stopPropagation();
-					r.classList.toggle("expanded")
+					o.setAttribute("aria-expanded", r.classList.toggle("expanded") ? "true" : "false");
 				})
 			} else {
 				r.className = "tree-leaf";
@@ -1027,126 +1056,146 @@ if ( ! function_exists( 'get_display_path' ) ) {
 </head>
 
 <body>
-	<div class="container">
-		<header class="error-header <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
-			<div class="error-info"><span
-					class="error-badge <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>"><?php echo esc_html( $type ); ?></span>
-				<h1 class="error-title"><?php echo esc_html( $message ); ?></h1>
-				<div class="error-meta <?php echo esc_attr( strtolower( str_replace( ' ', '-', $type ) ) ); ?>">
-					<span><?php echo esc_html( get_display_path( $triggerPoint['file'] ) ); ?>:<?php echo esc_html( $triggerPoint['line'] ); ?></span><button
-						class="btn-copy-path"
-						onclick="copyText('<?php echo esc_js( $triggerPoint['file'] ); ?>:<?php echo esc_js( $triggerPoint['line'] ); ?>')"
-						title="Copy path to clipboard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg></button>
+	<div class="screen">
+		<div class="container">
+			<header class="error-header">
+				<div class="error-info">
+					<h1 class="error-title">
+						<?php echo esc_html( $message ); ?>
+					</h1>
+					<p class="error-meta">
+						<span class="error-type">
+							<?php echo esc_html( $type ); ?>
+						</span>
+						<span class="error-where">
+							<?php echo esc_html( get_display_path( $triggerPoint['file'] ) ); ?>:
+							<?php echo esc_html( $triggerPoint['line'] ); ?>
+						</span>
+						<button type="button" class="btn-copy-path"
+							onclick="copyText('<?php echo esc_js( $triggerPoint['file'] ); ?>:<?php echo esc_js( $triggerPoint['line'] ); ?>')"
+							title="Copy path to clipboard" aria-label="Copy path to clipboard"><svg aria-hidden="true"
+								width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+								stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+							</svg></button>
+					</p>
 				</div>
-			</div>
-			<div class="actions-bar"><button class="btn btn-indigo" onclick="copyForAI()"><svg width="14" height="14"
-						viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-						stroke-linejoin="round">
-						<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-						<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-					</svg>Copy for AI</button><button class="btn btn-red" onclick="ignoreError()"><svg width="14"
-						height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round">
-						<path d="M18 6L6 18M6 6l12 12"></path>
-					</svg>Ignore</button></div>
-		</header>
-		<main class="workspace">
-			<section class="workspace-panel">
-				<div class="panel-header"><span class="panel-title">Stack Trace</span></div>
-				<div class="trace-list" id="trace-list"><?php if ( empty( $stackTrace ) ) : ?>
-						<div class="trace-item empty-message">No stack trace available.</div>
-					<?php
-					else :
-						?>
+				<div class="actions-bar">
+					<button type="button" class="btn btn--primary" onclick="copyForAI()"><svg aria-hidden="true"
+							width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+							stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+							<rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+						</svg>Copy for AI</button>
+					<button type="button" class="btn" onclick="ignoreError()"><svg aria-hidden="true" width="16"
+							height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round">
+							<path d="M18 6L6 18M6 6l12 12"></path>
+						</svg>Ignore</button>
+				</div>
+			</header>
+			<main class="workspace">
+				<section class="workspace-panel" aria-labelledby="trace-title">
+					<div class="panel-header">
+						<h2 class="panel-title" id="trace-title">Stack trace</h2>
+					</div>
+					<div class="trace-list" id="trace-list">
+						<?php if ( empty( $stackTrace ) ) : ?>
+						<p class="empty-message">No stack trace available.</p>
+						<?php else : ?>
 						<?php foreach ( $stackTrace as $index => $frame ) : ?>
-							<?php
+						<?php
 							$is_trigger = ( $frame['filePath'] === $triggerPoint['file'] && $frame['line'] === $triggerPoint['line'] );
 							$func_name  = 'main';
 							if ( ! empty( $frame['function'] ) ) {
 								$func_name = ! empty( $frame['class'] ) ? $frame['class'] . $frame['type'] . $frame['function'] : $frame['function'];
 							}
 							?>
-							<button class="trace-item<?php echo $index === 0 ? ' active' : ''; ?>"
-								onclick="selectFrame(<?php echo $index; ?>)">
-								<div class="trace-item-header"><span
-										class="trace-index">#<?php echo $index; ?></span>
-										<?php
-										if ( $is_trigger ) :
-											?>
-											<span
-											class="trace-trigger-badge">Trigger Point</span><?php endif; ?></div><span
-									class="trace-func"><?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview" style="color: var(--text-muted); font-size: 0.72rem; font-weight: normal;"><?php echo esc_html( get_args_preview( $frame['args'] ?? array() ) ); ?></span>)</span><span
-									class="trace-file-info"><?php echo esc_html( get_display_path( $frame['file'] ?? $frame['filePath'] ?? '' ) ); ?>:<?php echo esc_html( $frame['line'] ?? '' ); ?></span>
-							</button><?php endforeach; ?><?php endif; ?>
-				</div>
-			</section>
-			<div class="workspace-main">
-				<section class="workspace-panel code-viewer-panel">
-					<div class="panel-header"><span class="panel-title" id="code-viewer-filename">File Code
-							Snippet</span><div class="panel-actions"><a class="btn-copy-path" id="code-viewer-vscode-link"
-								href="#" title="Open in VS Code"><svg width="14" height="14" viewBox="0 0 24 24"
-									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-									stroke-linejoin="round">
-									<path d="M15 3h6v6"></path>
-									<path d="M10 14 21 3"></path>
-									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-								</svg></a><button class="btn-copy-path" id="code-viewer-copy-btn"
-								title="Copy file path"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-									stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-									<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-								</svg></button></div></div>
-					<div class="code-container">
-						<div class="line-numbers" id="code-line-numbers"></div>
-						<pre class="code-lines"><code id="code-content"></code></pre>
+						<button type="button" class="trace-item<?php echo 0 === $index ? ' active' : ''; ?>"
+							aria-current="<?php echo 0 === $index ? 'true' : 'false'; ?>"
+							onclick="selectFrame(<?php echo (int) $index; ?>)">
+							<span class="trace-item-header"><span class="trace-index">#
+									<?php echo (int) $index; ?>
+								</span>
+								<?php if ( $is_trigger ) : ?>
+								<span class="trace-trigger-badge">Trigger point</span>
+								<?php endif; ?>
+							</span>
+							<span class="trace-func">
+								<?php echo esc_html( $func_name ); ?>(<span class="trace-arg-preview">
+									<?php echo esc_html( get_args_preview( $frame['args'] ?? array() ) ); ?>
+								</span>)
+							</span>
+							<span class="trace-file-info">
+								<?php echo esc_html( get_display_path( $frame['file'] ?? $frame['filePath'] ?? '' ) ); ?>:
+								<?php echo esc_html( $frame['line'] ?? '' ); ?>
+							</span>
+						</button>
+						<?php endforeach; ?>
+						<?php endif; ?>
 					</div>
 				</section>
-				<section class="workspace-panel arguments-panel">
-					<div class="panel-header"><span class="panel-title">Arguments</span></div>
-					<div class="arguments-content" id="arguments-content"></div>
-				</section>
-			</div>
-		</main>
-		<footer class="tabs-card">
-			<div class="tabs-header">
-				<?php
-				$tab_keys   = array( '$_GET', '$_POST', '$_FILES', '$_COOKIE', '$_SESSION', '$_SERVER' );
-				$active_tab = '';
-				foreach ( $tab_keys as $key ) {
-					$has_data = ! empty( $superglobals[ $key ] );
-					if ( $key === '$_SERVER' ) {
-						$has_data = true;
-					}
-					if ( $has_data ) {
-						if ( empty( $active_tab ) ) {
-							$active_tab = $key;
-						}
-						$class = $active_tab === $key ? ' active' : '';
-						printf( '<button class="tab-btn%s" onclick="switchTab(\'%s\')">%s</button>', $class, esc_attr( $key ), esc_html( $key ) );
-					}
-				}
-				?>
-			</div><?php foreach ( $tab_keys as $key ) : ?>
-				<?php
-				$has_data = ! empty( $superglobals[ $key ] );
-				if ( $key === '$_SERVER' ) {
-					$has_data = true;
-				}
-				if ( $has_data ) :
-					$class = $active_tab === $key ? ' active' : '';
-					$val   = $superglobals[ $key ] ?? array();
-					?>
-					<div class="tab-content<?php echo $class; ?>" id="tab-content-<?php echo esc_attr( $key ); ?>">
-						<div id="tree-<?php echo esc_attr( str_replace( '$', '', $key ) ); ?>"></div>
-					</div><?php endif; ?><?php endforeach; ?>
-		</footer>
+				<div class="workspace-main">
+					<section class="workspace-panel" aria-label="Code">
+						<div class="panel-header">
+							<span class="panel-title panel-title--path" id="code-viewer-filename">File code
+								snippet</span>
+							<div class="panel-actions">
+								<a class="btn-copy-path" id="code-viewer-vscode-link" href="#" title="Open in VS Code"
+									aria-label="Open in VS Code"><svg aria-hidden="true" width="16" height="16"
+										viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+										stroke-linecap="round" stroke-linejoin="round">
+										<path d="M15 3h6v6"></path>
+										<path d="M10 14 21 3"></path>
+										<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+									</svg></a>
+								<button type="button" class="btn-copy-path" id="code-viewer-copy-btn"
+									title="Copy file path" aria-label="Copy file path"><svg aria-hidden="true"
+										width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+										stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+									</svg></button>
+							</div>
+						</div>
+						<div class="code-container">
+							<div class="line-numbers" id="code-line-numbers"></div>
+							<pre class="code-lines"><code id="code-content"></code></pre>
+						</div>
+					</section>
+					<section class="workspace-panel" aria-labelledby="arguments-title">
+						<div class="panel-header">
+							<h2 class="panel-title" id="arguments-title">Arguments</h2>
+						</div>
+						<div class="arguments-content" id="arguments-content"></div>
+					</section>
+				</div>
+			</main>
+			<section class="tabs-card" aria-label="Request data">
+				<div class="tabs-header" role="tablist">
+					<?php foreach ( $tab_keys as $key ) : ?>
+					<button type="button" class="tab-btn<?php echo $active_tab === $key ? ' active' : ''; ?>" role="tab"
+						aria-selected="<?php echo $active_tab === $key ? 'true' : 'false'; ?>"
+						aria-controls="tab-content-<?php echo esc_attr( $key ); ?>"
+						data-tab="<?php echo esc_attr( $key ); ?>"
+						onclick="switchTab('<?php echo esc_attr( $key ); ?>')">
+						<?php echo esc_html( $tab_labels[ $key ] ); ?>
+					</button>
+					<?php endforeach; ?>
+				</div>
+				<?php foreach ( $tab_keys as $key ) : ?>
+				<div class="tab-content<?php echo $active_tab === $key ? ' active' : ''; ?>"
+					id="tab-content-<?php echo esc_attr( $key ); ?>" role="tabpanel">
+					<div id="tree-<?php echo esc_attr( str_replace( '$', '', $key ) ); ?>"></div>
+				</div>
+				<?php endforeach; ?>
+			</section>
+		</div>
 	</div>
-	<div id="toast" class="toast"><svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-			stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+	<div id="toast" class="toast" role="status" aria-live="polite"><svg aria-hidden="true" class="toast-icon" width="16"
+			height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+			stroke-linejoin="round">
 			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
 			<polyline points="22 4 12 14.01 9 11.01"></polyline>
 		</svg><span id="toast-message">Copied!</span></div>

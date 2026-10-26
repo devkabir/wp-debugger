@@ -1,523 +1,621 @@
+<?php
+// dump() can run several times in one request, so every instance gets its own id and scoped script.
+$uid = uniqid( 'wpd-dump-' );
+?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
     <title>WP Debugger - Variable Dump</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        :root {
-            --bg-color: #090d16;
-            --card-bg: #121824;
-            --card-border: #1e293b;
-            --card-hover-bg: #1a2336;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-indigo: #818cf8;
-            --accent-indigo-hover: #6366f1;
-            --accent-indigo-bg: #1e1b4b;
-            --accent-indigo-border: #312e81;
-            --code-bg: #090d16;
-            --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            --font-mono: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace;
-        }
+      /* Tokens live on the wrapper, not :root, because a dump can print inside another page and must not restyle it. */
+      .wpd-dump {
+        color-scheme: dark;
+        --space-3xs: 2px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 40px;
+        --text-xs: 0.75rem;
+        --text-sm: 0.875rem;
+        --text-md: 1rem;
+        --text-display: 1.44rem;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --dur-micro: 120ms;
+        --dur-short: 220ms;
+        --container: 1200px;
+        --gutter: 32px;
+        --z-toast: 100001;
+        --color-paper: oklch(17% 0.008 250);
+        --color-paper-2: oklch(21% 0.009 250);
+        --color-paper-3: oklch(13.5% 0.007 250);
+        --color-ink: oklch(95% 0.005 250);
+        --color-ink-2: oklch(83% 0.008 250);
+        --color-muted: oklch(71% 0.01 250);
+        --color-rule: oklch(31% 0.01 250);
+        --color-rule-2: oklch(42% 0.012 250);
+        --color-accent-soft: oklch(29% 0.05 80);
+        --color-focus: oklch(82% 0.15 80);
+        --color-cool: oklch(77% 0.12 245);
+        --color-ok: oklch(76% 0.15 150);
+        --font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+        --font-body: var(--font-display);
+        --font-outlier: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+        --radius-card: 10px;
+        --radius-pill: 6px;
+        --radius-chip: 4px;
+        --rule-hair: 1px;
+        --tracking-display: -0.03em;
+        --display-weight: 500;
+      }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+      @media (prefers-color-scheme: light) {
+        .wpd-dump {
+          color-scheme: light;
+          --color-paper: oklch(98% 0.006 85);
+          --color-paper-2: oklch(100% 0 0);
+          --color-paper-3: oklch(95.5% 0.008 85);
+          --color-ink: oklch(19% 0.01 60);
+          --color-ink-2: oklch(32% 0.01 60);
+          --color-muted: oklch(46% 0.012 60);
+          --color-rule: oklch(88% 0.008 85);
+          --color-rule-2: oklch(76% 0.01 85);
+          --color-accent-soft: oklch(93% 0.04 80);
+          --color-focus: oklch(50% 0.13 70);
+          --color-cool: oklch(50% 0.14 250);
+          --color-ok: oklch(50% 0.13 150);
         }
+      }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: var(--font-sans);
-            line-height: 1.5;
-            padding: 2rem;
-            min-height: 100vh;
+      html,
+      body {
+        overflow-x: clip;
+      }
+      .wpd-dump,
+      .wpd-dump *,
+      .wpd-dump *::before,
+      .wpd-dump *::after {
+        box-sizing: border-box;
+      }
+      .wpd-dump {
+        padding: var(--space-lg) var(--gutter);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        font-family: var(--font-body);
+        font-size: var(--text-md);
+        line-height: 1.55;
+        text-align: left;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wpd-dump ::selection {
+        background: var(--color-accent-soft);
+      }
+      .wpd-dump :focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+      .wpd-dump h1 {
+        margin: 0;
+        color: var(--color-ink);
+        font-family: var(--font-display);
+        font-size: var(--text-display);
+        font-weight: var(--display-weight);
+        letter-spacing: var(--tracking-display);
+        line-height: 1.1;
+        overflow-wrap: break-word;
+        min-width: 0;
+        text-wrap: balance;
+      }
+      .wpd-dump button,
+      .wpd-dump input {
+        font: inherit;
+      }
+      @media (max-width: 40rem) {
+        .wpd-dump {
+          --gutter: 16px;
         }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wpd-dump *,
+        .wpd-dump *::before,
+        .wpd-dump *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
+      .wpd-dump .container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        width: 100%;
+        max-width: var(--container);
+        margin-inline: auto;
+      }
 
-        /* Header */
-        .dump-header {
-            background: linear-gradient(135deg, var(--card-bg) 0%, #151d2d 100%);
-            border: 1px solid var(--card-border);
-            border-left: 4px solid var(--accent-indigo);
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
+      .wpd-dump .dump-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        padding: var(--space-md) var(--space-lg);
+        background: var(--color-paper-2);
+        border: var(--rule-hair) solid var(--color-rule);
+        border-radius: var(--radius-card);
+      }
+      .wpd-dump .controls-area {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-xs);
+      }
 
-        .dump-title-area {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
+      .wpd-dump .search-input {
+        width: 16rem;
+        min-height: 40px;
+        margin: 0;
+        padding: 0 var(--space-sm);
+        border: var(--rule-hair) solid var(--color-rule);
+        border-radius: var(--radius-pill);
+        background: var(--color-paper-3);
+        box-shadow: none;
+        color: var(--color-ink);
+        font-size: var(--text-sm);
+        line-height: 1.4;
+        transition: border-color var(--dur-micro) var(--ease-out);
+      }
+      .wpd-dump .search-input::placeholder {
+        color: var(--color-muted);
+      }
+      .wpd-dump .search-input:hover {
+        border-color: var(--color-rule-2);
+      }
+      .wpd-dump .search-input:focus {
+        border-color: var(--color-focus);
+        box-shadow: none;
+        outline: none;
+      }
+      .wpd-dump .search-input:focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+      .wpd-dump .search-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
-        .dump-badge {
-            align-self: flex-start;
-            background-color: var(--accent-indigo-bg);
-            border: 1px solid var(--accent-indigo-border);
-            color: var(--accent-indigo);
-            padding: 0.25rem 0.6rem;
-            border-radius: 9999px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+      .wpd-dump .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        min-height: 40px;
+        margin: 0;
+        padding: 0 var(--space-md);
+        border: var(--rule-hair) solid var(--color-rule-2);
+        border-radius: var(--radius-pill);
+        background: var(--color-paper-2);
+        color: var(--color-ink);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color var(--dur-micro) var(--ease-out);
+      }
+      .wpd-dump .btn:hover {
+        background: var(--color-rule);
+      }
+      .wpd-dump .btn:active {
+        background: var(--color-paper-3);
+      }
+      .wpd-dump .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .wpd-dump .btn--small {
+        min-height: 32px;
+        padding: 0 var(--space-sm);
+        font-size: var(--text-xs);
+      }
 
-        .dump-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-main);
-        }
+      .wpd-dump .dumps {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+      }
+      .wpd-dump .dump-item-card {
+        overflow: hidden;
+        background: var(--color-paper-2);
+        border: var(--rule-hair) solid var(--color-rule);
+        border-radius: var(--radius-card);
+      }
+      .wpd-dump .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        min-height: 48px;
+        padding: var(--space-xs) var(--space-md);
+        border-bottom: var(--rule-hair) solid var(--color-rule);
+      }
+      .wpd-dump .card-title {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-ink-2);
+      }
+      .wpd-dump .card-body {
+        max-height: 70vh;
+        overflow: auto;
+        padding: var(--space-md);
+        background: var(--color-paper-3);
+      }
 
-        /* Search / Controls */
-        .controls-area {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
+      .wpd-dump .tree-node,
+      .wpd-dump .tree-leaf {
+        margin-left: var(--space-md);
+        font-family: var(--font-outlier);
+        font-size: var(--text-sm);
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+      .wpd-dump .card-body > .tree-node,
+      .wpd-dump .card-body > .tree-leaf {
+        margin-left: 0;
+      }
+      .wpd-dump .tree-node-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        margin: 0;
+        padding: 0 var(--space-2xs);
+        border: 0;
+        border-radius: var(--radius-chip);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color var(--dur-micro) var(--ease-out);
+      }
+      .wpd-dump .tree-node-trigger:hover {
+        background: var(--color-rule);
+      }
+      .wpd-dump .tree-node-trigger:active {
+        background: var(--color-paper-2);
+      }
+      .wpd-dump .tree-node-trigger::before {
+        content: "▸";
+        color: var(--color-muted);
+        transition: transform var(--dur-micro) var(--ease-out);
+      }
+      .wpd-dump .tree-node.expanded > .tree-node-trigger::before {
+        transform: rotate(90deg);
+      }
+      .wpd-dump .tree-node-children {
+        display: none;
+        margin-left: var(--space-2xs);
+        padding-left: var(--space-2xs);
+        border-left: var(--rule-hair) solid var(--color-rule);
+      }
+      .wpd-dump .tree-node.expanded > .tree-node-children {
+        display: block;
+      }
+      .wpd-dump .tree-key {
+        color: var(--color-ink-2);
+      }
+      .wpd-dump .tree-count,
+      .wpd-dump .tree-value-null {
+        color: var(--color-muted);
+      }
+      .wpd-dump .tree-value-string {
+        color: var(--color-cool);
+      }
+      .wpd-dump .tree-value-number,
+      .wpd-dump .tree-value-boolean {
+        color: var(--color-ink);
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      .wpd-dump .highlight-match {
+        padding: 0 var(--space-3xs);
+        border-radius: var(--radius-chip);
+        background: var(--color-accent-soft);
+        color: var(--color-ink);
+      }
+      .wpd-dump .empty-message {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: var(--text-sm);
+      }
 
-        .search-input {
-            background-color: var(--code-bg);
-            border: 1px solid var(--card-border);
-            color: var(--text-main);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-family: var(--font-sans);
-            font-size: 0.875rem;
-            width: 250px;
-            outline: none;
-            transition: border-color 0.2s ease;
-        }
-
-        .search-input:focus {
-            border-color: var(--accent-indigo);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            border: 1px solid transparent;
-        }
-
-        .btn-indigo {
-            background-color: var(--accent-indigo-bg);
-            color: var(--accent-indigo);
-            border-color: var(--accent-indigo-border);
-        }
-
-        .btn-indigo:hover {
-            background-color: var(--accent-indigo);
-            color: var(--bg-color);
-        }
-
-        /* Dump Items */
-        .dump-item-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--card-border);
-            background-color: rgba(255, 255, 255, 0.02);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-family: var(--font-mono);
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--accent-indigo);
-        }
-
-        .card-body {
-            padding: 1.5rem;
-            overflow: auto;
-        }
-
-        /* Tree Viewer */
-        .tree-node {
-            margin-left: 1.5rem;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            line-height: 1.6;
-        }
-
-        .tree-node-trigger {
-            cursor: pointer;
-            user-select: none;
-            color: var(--accent-indigo);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .tree-node-trigger::before {
-            content: '▶';
-            display: inline-block;
-            font-size: 0.6rem;
-            transition: transform 0.2s ease;
-            color: var(--text-muted);
-        }
-
-        .tree-node.expanded > .tree-node-trigger::before {
-            transform: rotate(90deg);
-        }
-
-        .tree-node-children {
-            display: none;
-            border-left: 1px dashed var(--card-border);
-            margin-left: 0.5rem;
-            padding-left: 0.5rem;
-        }
-
-        .tree-node.expanded > .tree-node-children {
-            display: block;
-        }
-
-        .tree-leaf {
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            margin-left: 1.5rem;
-            line-height: 1.6;
-            word-break: break-all;
-        }
-
-        .tree-key {
-            color: #f472b6; /* Pink */
-        }
-
-        .tree-value-string {
-            color: #34d399; /* Green */
-        }
-
-        .tree-value-number {
-            color: #fb7185; /* Light Red */
-        }
-
-        .tree-value-boolean {
-            color: #60a5fa; /* Blue */
-        }
-
-        .tree-value-null {
-            color: #94a3b8;
-            font-style: italic;
-        }
-
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background-color: #1e293b;
-            border: 1px solid var(--accent-indigo-border);
-            color: #e2e8f0;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            z-index: 9999;
-            transform: translateY(150%);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-        }
-
-        .toast-icon {
-            color: var(--accent-indigo);
-        }
-
-        .highlight-match {
-            background-color: rgba(254, 240, 138, 0.2);
-            color: #fef08a;
-            padding: 0 0.1rem;
-            border-radius: 2px;
-        }
+      .wpd-dump .toast {
+        position: fixed;
+        right: var(--space-md);
+        bottom: var(--space-md);
+        z-index: var(--z-toast);
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-xs) var(--space-md);
+        border: var(--rule-hair) solid var(--color-rule-2);
+        border-radius: var(--radius-pill);
+        background: var(--color-paper-2);
+        color: var(--color-ink);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        transform: translateY(calc(100% + var(--space-xl)));
+        transition: transform var(--dur-short) var(--ease-out);
+      }
+      .wpd-dump .toast.show {
+        transform: none;
+      }
+      .wpd-dump .toast-icon {
+        display: block;
+        color: var(--color-ok);
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
+  </head>
+  <body>
+    <div class="wpd-dump" id="<?php echo esc_attr( $uid ); ?>">
+      <div class="container">
         <header class="dump-header">
-            <div class="dump-title-area">
-                <span class="dump-badge">Var Dump</span>
-                <h1 class="dump-title">Debugger Variable Inspector</h1>
-            </div>
-            <div class="controls-area">
-                <input type="text" id="search-box" class="search-input" placeholder="Search keys or values..." oninput="handleSearch(this.value)">
-                <button class="btn btn-indigo" onclick="expandAll()">Expand All</button>
-                <button class="btn btn-indigo" onclick="collapseAll()">Collapse All</button>
-            </div>
+          <h1 class="dump-title">Debugger variable inspector</h1>
+          <div class="controls-area">
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Search keys or values…"
+              aria-label="Search keys or values"
+            />
+            <button type="button" class="btn" data-action="expand">
+              Expand all
+            </button>
+            <button type="button" class="btn" data-action="collapse">
+              Collapse all
+            </button>
+          </div>
         </header>
 
-        <!-- Variable Dumps -->
-        <main id="dumps-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <!-- Generated dynamically -->
-        </main>
-    </div>
+        <main class="dumps"></main>
+      </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast">
-        <svg class="toast-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        <span id="toast-message">Copied!</span>
+      <div class="toast" role="status" aria-live="polite">
+        <svg
+          class="toast-icon"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span class="toast-message">Copied!</span>
+      </div>
     </div>
 
     <script>
-        // Retrieve variables dumped
-        const wpDebuggerData = <?php echo json_encode($data, JSON_UNESCAPED_SLASHES); ?>;
+      (() => {
+      	const root = document.getElementById(<?php echo json_encode( $uid ); ?>);
+      	const wpDebuggerData = <?php echo json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE ); ?>;
+      	const container = root.querySelector('.dumps');
+      	const toast = root.querySelector('.toast');
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-message').innerText = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
+      	function showToast(message) {
+      		toast.querySelector('.toast-message').innerText = message;
+      		toast.classList.add('show');
+      		setTimeout(() => {
+      			toast.classList.remove('show');
+      		}, 3000);
+      	}
 
-        function fallbackCopyText(text, successMessage) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.top = '0';
-            textArea.style.left = '0';
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    showToast(successMessage);
-                } else {
-                    console.error('Fallback copy failed');
-                }
-            } catch (err) {
-                console.error('Fallback copy failed: ', err);
-            }
-            document.body.removeChild(textArea);
-        }
+      	function fallbackCopyText(text, successMessage) {
+      		const textArea = document.createElement('textarea');
+      		textArea.value = text;
+      		textArea.style.top = '0';
+      		textArea.style.left = '0';
+      		textArea.style.position = 'fixed';
+      		textArea.style.opacity = '0';
+      		document.body.appendChild(textArea);
+      		textArea.focus();
+      		textArea.select();
+      		try {
+      			const successful = document.execCommand('copy');
+      			if (successful) {
+      				showToast(successMessage);
+      			} else {
+      				console.error('Fallback copy failed');
+      			}
+      		} catch (err) {
+      			console.error('Fallback copy failed: ', err);
+      		}
+      		document.body.removeChild(textArea);
+      	}
 
-        function copyJson(index) {
-            const val = wpDebuggerData[index];
-            const jsonStr = JSON.stringify(val, null, 2);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(jsonStr).then(() => {
-                    showToast('Copied JSON to clipboard');
-                }).catch(err => {
-                    console.error('Could not copy JSON: ', err);
-                    fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
-                });
-            } else {
-                fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
-            }
-        }
+      	function copyJson(index) {
+      		const jsonStr = JSON.stringify(wpDebuggerData[index], null, 2);
+      		if (navigator.clipboard && navigator.clipboard.writeText) {
+      			navigator.clipboard.writeText(jsonStr).then(() => {
+      				showToast('Copied JSON to clipboard');
+      			}).catch(err => {
+      				console.error('Could not copy JSON: ', err);
+      				fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
+      			});
+      		} else {
+      			fallbackCopyText(jsonStr, 'Copied JSON to clipboard');
+      		}
+      	}
 
-        // Tree build helper
-        function buildTreeHTML(value, key = null, filter = '') {
-            const node = document.createElement('div');
-            
-            // Check value type
-            if (value !== null && typeof value === 'object') {
-                node.className = 'tree-node expanded'; // Expand by default
-                
-                const trigger = document.createElement('span');
-                trigger.className = 'tree-node-trigger';
-                
-                if (key !== null) {
-                    const keySpan = document.createElement('span');
-                    keySpan.className = 'tree-key';
-                    keySpan.innerHTML = highlightSearchText(`"${key}"`, filter);
-                    trigger.appendChild(keySpan);
-                    trigger.appendChild(document.createTextNode(': '));
-                }
-                
-                const typeLabel = Array.isArray(value) ? `Array [${value.length}]` : `Object {${Object.keys(value).length}}`;
-                const typeSpan = document.createElement('span');
-                typeSpan.style.color = 'var(--text-muted)';
-                typeSpan.innerText = typeLabel;
-                trigger.appendChild(typeSpan);
-                
-                node.appendChild(trigger);
+      	// Writes text into el as text nodes, wrapping each match in <mark>; dumped data never reaches innerHTML.
+      	function appendHighlighted(el, text, filter) {
+      		if (!filter) {
+      			el.textContent = text;
+      			return;
+      		}
+      		const lower = text.toLowerCase();
+      		const needle = filter.toLowerCase();
+      		let from = 0;
+      		let at;
+      		while ((at = lower.indexOf(needle, from)) !== -1) {
+      			el.append(text.slice(from, at));
+      			const mark = document.createElement('mark');
+      			mark.className = 'highlight-match';
+      			mark.textContent = text.slice(at, at + needle.length);
+      			el.append(mark);
+      			from = at + needle.length;
+      		}
+      		el.append(text.slice(from));
+      	}
 
-                const childrenContainer = document.createElement('div');
-                childrenContainer.className = 'tree-node-children';
-                
-                let hasVisibleChildren = false;
-                for (const k in value) {
-                    if (value.hasOwnProperty(k)) {
-                        const childNode = buildTreeHTML(value[k], k, filter);
-                        if (childNode) {
-                            childrenContainer.appendChild(childNode);
-                            hasVisibleChildren = true;
-                        }
-                    }
-                }
-                
-                node.appendChild(childrenContainer);
+      	function matchesFilter(text, filter) {
+      		return text !== null && String(text).toLowerCase().includes(filter.toLowerCase());
+      	}
 
-                // Add click listener to toggle expand
-                trigger.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    node.classList.toggle('expanded');
-                });
+      	function keySpan(key, filter) {
+      		const span = document.createElement('span');
+      		span.className = 'tree-key';
+      		appendHighlighted(span, `"${key}"`, filter);
+      		return span;
+      	}
 
-                // If filter is active and no children match, hide this node
-                if (filter && !hasVisibleChildren && !matchesFilter(key, filter)) {
-                    return null;
-                }
-                
-            } else {
-                // If filter is active and leaf does not match key or value, hide it
-                if (filter && !matchesFilter(key, filter) && !matchesFilter(String(value), filter)) {
-                    return null;
-                }
+      	function buildTreeHTML(value, key = null, filter = '') {
+      		const node = document.createElement('div');
 
-                node.className = 'tree-leaf';
-                
-                if (key !== null) {
-                    const keySpan = document.createElement('span');
-                    keySpan.className = 'tree-key';
-                    keySpan.innerHTML = highlightSearchText(`"${key}"`, filter);
-                    node.appendChild(keySpan);
-                    node.appendChild(document.createTextNode(': '));
-                }
+      		if (value !== null && typeof value === 'object') {
+      			node.className = 'tree-node expanded';
 
-                const valueSpan = document.createElement('span');
-                if (typeof value === 'string') {
-                    valueSpan.className = 'tree-value-string';
-                    valueSpan.innerHTML = highlightSearchText(`"${value}"`, filter);
-                } else if (typeof value === 'number') {
-                    valueSpan.className = 'tree-value-number';
-                    valueSpan.innerHTML = highlightSearchText(String(value), filter);
-                } else if (typeof value === 'boolean') {
-                    valueSpan.className = 'tree-value-boolean';
-                    valueSpan.innerHTML = highlightSearchText(value ? 'true' : 'false', filter);
-                } else if (value === null) {
-                    valueSpan.className = 'tree-value-null';
-                    valueSpan.innerHTML = highlightSearchText('null', filter);
-                } else {
-                    valueSpan.innerHTML = highlightSearchText(String(value), filter);
-                }
-                node.appendChild(valueSpan);
-            }
+      			const trigger = document.createElement('button');
+      			trigger.type = 'button';
+      			trigger.className = 'tree-node-trigger';
+      			trigger.setAttribute('aria-expanded', 'true');
 
-            return node;
-        }
+      			if (key !== null) {
+      				trigger.append(keySpan(key, filter), ': ');
+      			}
 
-        function matchesFilter(text, filter) {
-            if (!text) return false;
-            return text.toLowerCase().includes(filter.toLowerCase());
-        }
+      			const typeSpan = document.createElement('span');
+      			typeSpan.className = 'tree-count';
+      			typeSpan.innerText = Array.isArray(value) ? `Array [${value.length}]` : `Object {${Object.keys(value).length}}`;
+      			trigger.appendChild(typeSpan);
+      			node.appendChild(trigger);
 
-        function highlightSearchText(text, filter) {
-            if (!filter) return text;
-            const escFilter = filter.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(`(${escFilter})`, 'gi');
-            return text.replace(regex, '<span class="highlight-match">$1</span>');
-        }
+      			const childrenContainer = document.createElement('div');
+      			childrenContainer.className = 'tree-node-children';
 
-        // Render Dumps
-        function renderDumps(filter = '') {
-            const container = document.getElementById('dumps-container');
-            container.innerHTML = '';
+      			let hasVisibleChildren = false;
+      			for (const k in value) {
+      				if (Object.prototype.hasOwnProperty.call(value, k)) {
+      					const childNode = buildTreeHTML(value[k], k, filter);
+      					if (childNode) {
+      						childrenContainer.appendChild(childNode);
+      						hasVisibleChildren = true;
+      					}
+      				}
+      			}
+      			node.appendChild(childrenContainer);
 
-            wpDebuggerData.forEach((val, idx) => {
-                const card = document.createElement('div');
-                card.className = 'dump-item-card';
+      			trigger.addEventListener('click', (e) => {
+      				e.stopPropagation();
+      				trigger.setAttribute('aria-expanded', node.classList.toggle('expanded') ? 'true' : 'false');
+      			});
 
-                const header = document.createElement('div');
-                header.className = 'card-header';
+      			// If filter is active and no children match, hide this node.
+      			if (filter && !hasVisibleChildren && !matchesFilter(key, filter)) {
+      				return null;
+      			}
+      		} else {
+      			// If filter is active and leaf does not match key or value, hide it.
+      			if (filter && !matchesFilter(key, filter) && !matchesFilter(String(value), filter)) {
+      				return null;
+      			}
 
-                const title = document.createElement('span');
-                title.className = 'card-title';
-                title.innerText = `Dump #${idx + 1} (${typeof val})`;
-                header.appendChild(title);
+      			node.className = 'tree-leaf';
 
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'btn btn-indigo';
-                copyBtn.style.padding = '0.3rem 0.75rem';
-                copyBtn.style.fontSize = '0.75rem';
-                copyBtn.innerText = 'Copy JSON';
-                copyBtn.onclick = () => copyJson(idx);
-                header.appendChild(copyBtn);
+      			if (key !== null) {
+      				node.append(keySpan(key, filter), ': ');
+      			}
 
-                card.appendChild(header);
+      			const valueSpan = document.createElement('span');
+      			let text = String(value);
+      			if (typeof value === 'string') {
+      				valueSpan.className = 'tree-value-string';
+      				text = `"${value}"`;
+      			} else if (typeof value === 'number') {
+      				valueSpan.className = 'tree-value-number';
+      			} else if (typeof value === 'boolean') {
+      				valueSpan.className = 'tree-value-boolean';
+      			} else if (value === null) {
+      				valueSpan.className = 'tree-value-null';
+      			}
+      			appendHighlighted(valueSpan, text, filter);
+      			node.appendChild(valueSpan);
+      		}
 
-                const body = document.createElement('div');
-                body.className = 'card-body';
+      		return node;
+      	}
 
-                const tree = buildTreeHTML(val, null, filter);
-                if (tree) {
-                    body.appendChild(tree);
-                } else {
-                    body.innerHTML = '<span class="empty-message">No matching keys or values found</span>';
-                }
+      	function renderDumps(filter = '') {
+      		container.innerHTML = '';
 
-                card.appendChild(body);
-                container.appendChild(card);
-            });
-        }
+      		wpDebuggerData.forEach((val, idx) => {
+      			const card = document.createElement('section');
+      			card.className = 'dump-item-card';
 
-        // Search handler
-        function handleSearch(val) {
-            renderDumps(val);
-        }
+      			const header = document.createElement('div');
+      			header.className = 'card-header';
 
-        // Expand/Collapse all nodes
-        function expandAll() {
-            const nodes = document.querySelectorAll('.tree-node');
-            nodes.forEach(n => n.classList.add('expanded'));
-        }
+      			const title = document.createElement('span');
+      			title.className = 'card-title';
+      			title.innerText = `Dump #${idx + 1} (${typeof val})`;
+      			header.appendChild(title);
 
-        function collapseAll() {
-            const nodes = document.querySelectorAll('.tree-node');
-            nodes.forEach(n => n.classList.remove('expanded'));
-        }
+      			const copyBtn = document.createElement('button');
+      			copyBtn.type = 'button';
+      			copyBtn.className = 'btn btn--small';
+      			copyBtn.innerText = 'Copy JSON';
+      			copyBtn.onclick = () => copyJson(idx);
+      			header.appendChild(copyBtn);
+      			card.appendChild(header);
 
-        // Init
-        document.addEventListener('DOMContentLoaded', () => {
-            renderDumps();
-        });
+      			const body = document.createElement('div');
+      			body.className = 'card-body';
+      			const tree = buildTreeHTML(val, null, filter);
+      			if (tree) {
+      				body.appendChild(tree);
+      			} else {
+      				body.innerHTML = '<p class="empty-message">No matching keys or values found</p>';
+      			}
+      			card.appendChild(body);
+      			container.appendChild(card);
+      		});
+      	}
+
+      	function setAllExpanded(expanded) {
+      		root.querySelectorAll('.tree-node').forEach(n => {
+      			n.classList.toggle('expanded', expanded);
+      			n.firstChild.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      		});
+      	}
+
+      	root.querySelector('.search-input').addEventListener('input', e => renderDumps(e.target.value));
+      	root.querySelector('[data-action="expand"]').addEventListener('click', () => setAllExpanded(true));
+      	root.querySelector('[data-action="collapse"]').addEventListener('click', () => setAllExpanded(false));
+
+      	// The script sits after its markup, so the elements exist already; no DOMContentLoaded needed.
+      	renderDumps();
+      })();
     </script>
-</body>
+  </body>
 </html>

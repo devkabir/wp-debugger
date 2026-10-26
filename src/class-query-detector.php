@@ -3,18 +3,19 @@
 namespace DevKabir\WPDebugger;
 
 /**
- * Detects N+1 query patterns and slow queries, then reports them to CLI, browser and log.
+ * Detects N+1 query patterns and slow queries, then reports them to CLI, admin notice and log.
  */
 class Query_Detector {
 	/**
 	 * Hook the detector into shutdown.
 	 */
 	public function __construct() {
-		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( 'Pest\TestSuite', false ) ) {
+		if ( defined( 'PEST_RUNNING' ) || defined( 'PHPUNIT_COMPOSER_INSTALL' ) || class_exists( \Pest\TestSuite::class, false ) ) {
 			return;
 		}
 
-		if ( ! defined( 'SAVEQUERIES' ) || ! SAVEQUERIES ) {
+		// A SAVEQUERIES already defined as false is respected; redefining it would only warn.
+		if ( ! defined( 'SAVEQUERIES' ) ) {
 			define( 'SAVEQUERIES', true );
 		}
 		add_action( 'shutdown', array( $this, 'detect_and_report' ) );
@@ -33,69 +34,48 @@ class Query_Detector {
 			return;
 		}
 
-		$threshold = (int) apply_filters( 'wp_debugger_n1_threshold', 5 );
+		$threshold  = (int) apply_filters( 'wp_debugger_n1_threshold', 5 );
 		$slow_limit = (float) apply_filters( 'wp_debugger_slow_query_threshold', 0.05 );
-		$needles   = array_filter( (array) apply_filters( 'wp_debugger_n1_caller_filter', '' ), 'strlen' );
-		$groups    = array();
-		$slow      = array();
+		$needles    = array_filter( (array) apply_filters( 'wp_debugger_n1_caller_filter', '' ), 'strlen' );
+		$groups     = array();
+		$slow       = array();
 
 		foreach ( $wpdb->queries as $query ) {
-			list( $sql, $time, $caller ) = array_pad( (array) $query, 3, '' );
+			list( $sql, $time, $caller ) = $query;
 
-			$sql    = (string) $sql;
-			$time   = (float) $time;
-			$caller = (string) $caller;
-
-			if ( $needles && ! $this->caller_matches( $caller, $needles ) ) {
+			if ( $needles && ! array_filter( $needles, static fn( $needle ) => str_contains( $caller, (string) $needle ) ) ) {
 				continue;
 			}
 
 			if ( $time >= $slow_limit ) {
-				$slow[] = array(
-					'time'   => $time,
-					'sql'    => $sql,
-					'caller' => $caller,
-				);
+				$slow[] = compact( 'time', 'sql', 'caller' );
 			}
 
 			// Group by query shape so a caller running N different queries is not mistaken for N+1.
 			$shape = $this->normalize_sql( $sql );
 			$key   = $caller . "\n" . $shape;
 
-			$groups[ $key ]['count']  = ( $groups[ $key ]['count'] ?? 0 ) + 1;
-			$groups[ $key ]['time']   = ( $groups[ $key ]['time'] ?? 0 ) + $time;
-			$groups[ $key ]['sql']    = $shape;
-			$groups[ $key ]['sample'] = $groups[ $key ]['sample'] ?? $sql;
-			$groups[ $key ]['caller'] = $caller;
+			$groups[ $key ] ??= array(
+				'count'  => 0,
+				'time'   => 0.0,
+				'sql'    => $shape,
+				'sample' => $sql,
+				'caller' => $caller,
+			);
+			++$groups[ $key ]['count'];
+			$groups[ $key ]['time'] += $time;
 		}
 
-		$flagged = array_filter(
-			$groups,
-			static function ( $item ) use ( $threshold ) {
-				return $item['count'] >= $threshold;
-			}
-		);
-
-		uasort(
-			$flagged,
-			static function ( $a, $b ) {
-				return $b['count'] <=> $a['count'];
-			}
-		);
-
-		usort(
-			$slow,
-			static function ( $a, $b ) {
-				return $b['time'] <=> $a['time'];
-			}
-		);
+		$flagged = array_filter( $groups, static fn( $item ) => $item['count'] >= $threshold );
 
 		if ( ! $flagged && ! $slow ) {
 			return;
 		}
 
-		$log = new Log( 'query-detector.log' );
-		$log->write(
+		uasort( $flagged, static fn( $a, $b ) => $b['count'] <=> $a['count'] );
+		usort( $slow, static fn( $a, $b ) => $b['time'] <=> $a['time'] );
+
+		( new Log( 'query-detector.log' ) )->write(
 			array(
 				'n1'   => array_values( $flagged ),
 				'slow' => $slow,
@@ -104,17 +84,11 @@ class Query_Detector {
 
 		if ( is_terminal_request() ) {
 			$this->report_cli( $flagged, $slow );
-		} else {
-			// Shutdown runs after admin_notices, so park the summary for the next admin load.
-			set_transient(
-				'wp_debugger_n1_notice',
-				array(
-					'n1'   => count( $flagged ),
-					'slow' => count( $slow ),
-				),
-				MINUTE_IN_SECONDS
-			);
+			return;
 		}
+
+		// Shutdown runs after admin_notices, so park the summary for the next admin load.
+		set_transient( 'wp_debugger_n1_notice', array( count( $flagged ), count( $slow ) ), MINUTE_IN_SECONDS );
 	}
 
 	/**
@@ -131,24 +105,10 @@ class Query_Detector {
 
 		delete_transient( 'wp_debugger_n1_notice' );
 
-		$counts = (array) $counts;
-		$parts  = array();
-
-		if ( ! empty( $counts['n1'] ) ) {
-			$parts[] = sprintf( '%d repeated query pattern(s)', (int) $counts['n1'] );
-		}
-
-		if ( ! empty( $counts['slow'] ) ) {
-			$parts[] = sprintf( '%d slow query(s)', (int) $counts['slow'] );
-		}
-
-		if ( ! $parts ) {
-			return;
-		}
-
 		printf(
-			'<div class="notice notice-warning"><p><strong>WP Debugger:</strong> %s detected. See the debug log for details.</p></div>',
-			esc_html( implode( ' and ', $parts ) )
+			'<div class="notice notice-warning"><p><strong>WP Debugger:</strong> %d repeated query pattern(s), %d slow query(s). See logs/query-detector.log for details.</p></div>',
+			(int) $counts[0],
+			(int) $counts[1]
 		);
 	}
 
@@ -160,30 +120,11 @@ class Query_Detector {
 	 * @return string
 	 */
 	private function normalize_sql( string $sql ): string {
-		$sql = preg_replace( '/\s+/', ' ', trim( $sql ) );
-		$sql = preg_replace( '/\'[^\']*\'|"[^"]*"/', '?', (string) $sql );
-		$sql = preg_replace( '/\b\d+\b/', '?', (string) $sql );
-		$sql = preg_replace( '/\?(\s*,\s*\?)+/', '?', (string) $sql );
-
-		return (string) $sql;
-	}
-
-	/**
-	 * Check a caller chain against any of the configured needles.
-	 *
-	 * @param string $caller  Comma separated caller chain from $wpdb->queries.
-	 * @param array  $needles Substrings to look for; any hit keeps the query.
-	 *
-	 * @return bool
-	 */
-	private function caller_matches( string $caller, array $needles ): bool {
-		foreach ( $needles as $needle ) {
-			if ( str_contains( $caller, (string) $needle ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return (string) preg_replace(
+			array( '/\s+/', '/\'[^\']*\'|"[^"]*"/', '/\b\d+\b/', '/\?(\s*,\s*\?)+/' ),
+			array( ' ', '?', '?', '?' ),
+			trim( $sql )
+		);
 	}
 
 	/**
@@ -236,8 +177,8 @@ class Query_Detector {
 	 * @return string
 	 */
 	private function truncate( string $sql ): string {
-		$sql = preg_replace( '/\s+/', ' ', trim( $sql ) );
+		$sql = (string) preg_replace( '/\s+/', ' ', trim( $sql ) );
 
-		return strlen( (string) $sql ) > 160 ? substr( (string) $sql, 0, 157 ) . '...' : (string) $sql;
+		return strlen( $sql ) > 160 ? substr( $sql, 0, 157 ) . '...' : $sql;
 	}
 }

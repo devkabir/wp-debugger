@@ -23,19 +23,13 @@ function write_log( ...$messages ) {
  */
 function debugger_trace_summary( array $trace ): array {
 	$formatted_trace = array();
-	foreach ( $trace as $value ) {
-		if ( ! isset( $value['file'] ) ) {
-			continue;
+	foreach ( $trace as $frame ) {
+		if ( isset( $frame['file'] ) ) {
+			$formatted_trace[ $frame['file'] . ':' . $frame['line'] ] = array(
+				'function' => $frame['function'],
+				'args'     => isset( $frame['args'] ) ? array_filter( $frame['args'] ) : false,
+			);
 		}
-		$formatted_trace[ $value['file'] . ':' . $value['line'] ] = array(
-			'function' => $value['function'],
-			'args'     => isset( $value['args'] ) ? array_filter(
-				$value['args'],
-				function ( $arg ) {
-					return ! empty( $arg );
-				}
-			) : false,
-		);
 	}
 
 	return $formatted_trace;
@@ -47,25 +41,19 @@ function debugger_trace_summary( array $trace ): array {
  * @return bool
  */
 function is_terminal_request(): bool {
-	if ( defined( 'WP_CLI' ) && WP_CLI ) {
-		return true;
-	}
-
-	if ( PHP_SAPI === 'cli' ) {
-		return true;
-	}
-
-	return false;
+	return PHP_SAPI === 'cli' || ( defined( 'WP_CLI' ) && WP_CLI );
 }
 
 /**
  * Outputs a formatted dump of a variable for debugging purposes.
  *
+ * @param mixed ...$args The variables to dump.
+ *
  * @return void
  * @throws Exception
  */
-function dump() {
-	$data = recursively_decode_json( func_get_args() );
+function dump( ...$args ) {
+	$data = recursively_decode_json( $args );
 
 	if ( is_terminal_request() ) {
 		echo json_encode( count( $data ) === 1 ? $data[0] : $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . PHP_EOL;
@@ -92,7 +80,7 @@ function dd( ...$args ) {
  * Dump all callbacks registered for a specific WordPress filter.
  *
  * @param string $filter The name of the filter.
- * @param bool   $dump Optional. Whether to dump or log the callbacks. Default is false for log.
+ * @param bool   $dump Optional. Whether to dump or log the callbacks. Default is true for dump.
  */
 function dump_filter_callbacks( string $filter, bool $dump = true ) {
 	global $wp_filter;
@@ -103,62 +91,48 @@ function dump_filter_callbacks( string $filter, bool $dump = true ) {
 		return;
 	}
 
-	// WordPress 5.0+ uses WP_Hook objects.
-	$callbacks = $wp_filter[ $filter ];
+	// WordPress 5.0+ wraps callbacks in WP_Hook objects.
+	$callbacks = $wp_filter[ $filter ] instanceof WP_Hook ? $wp_filter[ $filter ]->callbacks : $wp_filter[ $filter ];
 
-	if ( is_a( $callbacks, 'WP_Hook' ) ) {
-		$callbacks = $callbacks->callbacks;
-	}
-
-	if ( $dump ) {
-		dump( $filter, $callbacks );
-	} else {
-		write_log( $filter, $callbacks );
-	}
+	$dump ? dump( $filter, $callbacks ) : write_log( $filter, $callbacks );
 }
 
 /**
- * Recursively checks if a value is a JSON string, decodes it into an array,
- * and ensures all elements are strings. If any element is JSON, it gets decoded recursively.
+ * Recursively decode JSON strings, so nested JSON is shown as data.
+ *
+ * Any valid JSON string is decoded, so "123", "true" and "null" become scalars too.
  *
  * @param mixed $data The input value to check.
  *
  * @return mixed The processed array or original value.
  */
 function recursively_decode_json( $data ) {
-	// Check if input is a JSON string.
 	if ( is_string( $data ) ) {
 		$decoded = json_decode( $data, true );
-		if ( json_last_error() === JSON_ERROR_NONE ) {
-			$data = $decoded; // Convert to array.
+		if ( JSON_ERROR_NONE === json_last_error() ) {
+			$data = $decoded;
 		}
 	}
 
-	// If it's an array, process its elements.
-	if ( is_array( $data ) ) {
-		foreach ( $data as $key => $value ) {
-			$data[ $key ] = recursively_decode_json( $value );
-		}
-	}
-
-	return $data;
+	return is_array( $data ) ? array_map( 'recursively_decode_json', $data ) : $data;
 }
 
 if ( ! function_exists( 'debugger_format_variable' ) ) {
 	/**
-	 * Formats a message with the current timestamp for logging.
+	 * Format values as text lines for logging; arrays and JSON strings are pretty-printed.
 	 *
-	 * @return string The formatted message with the timestamp.
+	 * @param mixed ...$messages The values to format.
+	 *
+	 * @return string The formatted text.
 	 */
-	function debugger_format_variable(): string {
-		$args   = func_get_args();
+	function debugger_format_variable( ...$messages ): string {
 		$result = '';
-		foreach ( $args as $message ) {
+		foreach ( $messages as $message ) {
 			if ( is_array( $message ) ) {
 				ksort( $message );
 				$message = wp_json_encode( $message, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 			} elseif ( is_object( $message ) ) {
-				$message = get_class( $message );
+				$message = $message::class;
 			} elseif ( is_string( $message ) ) {
 				$decoded = json_decode( $message, true );
 				if ( JSON_ERROR_NONE === json_last_error() ) {

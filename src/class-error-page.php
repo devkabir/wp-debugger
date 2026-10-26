@@ -3,6 +3,7 @@
 namespace DevKabir\WPDebugger;
 
 use Throwable;
+use LimitIterator;
 use SplFileObject;
 use ErrorException;
 use RuntimeException;
@@ -18,14 +19,7 @@ class Error_Page {
 	private const SUPERGLOBAL_ITEM_LIMIT = 200;
 	private const CONTEXT_LINE_COUNT     = 40;
 	private const MAX_RECURSION_DEPTH    = 10;
-	private const FATAL_ERROR_TYPES      = array(
-		E_ERROR,
-		E_PARSE,
-		E_CORE_ERROR,
-		E_COMPILE_ERROR,
-		E_USER_ERROR,
-		E_RECOVERABLE_ERROR,
-	);
+	private const FATAL_ERROR_TYPES      = E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR;
 
 	/**
 	 * Toggle used to prevent re-entrant handling.
@@ -38,7 +32,8 @@ class Error_Page {
 	 * Constructor - Sets up error handling hooks and configuration
 	 */
 	public function __construct() {
-		if ( $this->should_skip_handling() ) {
+		// Opt out via a cookie set from the UI.
+		if ( ! empty( $_COOKIE['wp_debugger_ignore'] ) ) {
 			return;
 		}
 
@@ -46,15 +41,11 @@ class Error_Page {
 		set_error_handler( array( $this, 'errors' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		set_exception_handler( array( $this, 'handle' ) );
 		register_shutdown_function( array( $this, 'shutdown_handler' ) );
-		error_reporting( E_ERROR|E_PARSE|E_CORE_ERROR|E_COMPILE_ERROR|E_USER_ERROR|E_RECOVERABLE_ERROR ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+		error_reporting( self::FATAL_ERROR_TYPES ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
-	 * Converts PHP errors to Exceptions
-	 *
-	 * This function is the custom error handler for WordPress. It converts PHP
-	 * errors into Exceptions, which can then be caught and handled by the
-	 * `handle` method.
+	 * Converts fatal PHP errors to an ErrorException and renders it.
 	 *
 	 * @param int $severity The level of the error raised, as an integer.
 	 * @param string $message The error message, as a string.
@@ -63,7 +54,7 @@ class Error_Page {
 	 */
 	public function errors( int $severity, string $message, string $file, int $line ): bool {
 		// Skip errors silenced with @ or not fatal.
-		if ( ! ( error_reporting() & $severity ) || ! $this->is_fatal_error_type( $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
+		if ( ! ( error_reporting() & self::FATAL_ERROR_TYPES & $severity ) ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions, WordPress.PHP.DiscouragedPHPFunctions
 			return false;
 		}
 
@@ -85,61 +76,25 @@ class Error_Page {
 		}
 
 		$this->handling = true;
-		$this->clean_output_buffers();
-		$this->send_http_status();
 
-		if ( Plugin::get_instance()->is_json_request() ) {
-			$this->json_handler( $throwable );
-            error_log( $throwable->getMessage() ); // phpcs:ignore
-		} else {
-			$this->render( $throwable );
-		}
-
-		die;
-	}
-
-	/**
-	 * Clean any partial output so the error page mirrors core behaviour.
-	 *
-	 * @return void
-	 */
-	private function clean_output_buffers(): void {
+		// Drop partial output so the error page mirrors core behaviour.
 		while ( ob_get_level() ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
 			ob_end_clean(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.ObFunctions
 		}
-	}
 
-	/**
-	 * Send a 500 status code where headers permit.
-	 *
-	 * @return void
-	 */
-	private function send_http_status(): void {
 		if ( ! headers_sent() ) {
 			function_exists( 'status_header' ) ? status_header( 500 ) : header( 'HTTP/1.1 500 Internal Server Error' ); // phpcs:ignore WordPress.Security.SafeRedirect.phperror, WordPress.PHP.DevelopmentFunctions.error_reporting_error_handling
 		}
-	}
 
-	/**
-	 * Determine whether a PHP error type should use the fatal error page.
-	 *
-	 * @param int $type PHP error type.
-	 *
-	 * @return bool
-	 */
-	private function is_fatal_error_type( int $type ): bool {
-		return in_array( $type, self::FATAL_ERROR_TYPES, true );
-	}
+		if ( Plugin::get_instance()->is_json_request() ) {
+			$this->json_handler( $throwable );
+			error_log( $throwable->getMessage() ); // phpcs:ignore
+		} else {
+			! headers_sent() && header( 'Content-Type: text/html; charset=utf-8' );
+			Template::render( 'page', $this->prepare_error_data( $throwable ) );
+		}
 
-	/**
-	 * Determine if error handling should be skipped for this request.
-	 *
-	 * Allows opting out via a cookie (set from the UI) or query parameter.
-	 *
-	 * @return bool
-	 */
-	private function should_skip_handling(): bool {
-		return ! empty( $_COOKIE['wp_debugger_ignore'] );
+		die;
 	}
 
 	/**
@@ -158,22 +113,11 @@ class Error_Page {
 				'file'     => $throwable->getFile(),
 				'line'     => $throwable->getLine(),
 				'trace'    => debugger_trace_summary( $throwable->getTrace() ),
-				'previous' => $throwable->getPrevious(),
+				// A Throwable has no public props, so encoding it directly gives "{}".
+				'previous' => $throwable->getPrevious() ? $throwable->getPrevious()->getMessage() : null,
 			),
 			JSON_PRETTY_PRINT
 		);
-	}
-
-	/**
-	 * Renders the exception in HTML format using a template
-	 *
-	 * @param Throwable $throwable The exception to render.
-	 *
-	 * @return void
-	 */
-	private function render( Throwable $throwable ): void {
-		! headers_sent() && header( 'Content-Type: text/html; charset=utf-8' );
-		Template::render( 'page', $this->prepare_error_data( $throwable ) );
 	}
 
 	/**
@@ -184,35 +128,33 @@ class Error_Page {
 	 * @return array
 	 */
 	private function prepare_error_data( Throwable $throwable ): array {
-		$trace        = $throwable->getTrace();
-		$trigger_file = $throwable->getFile();
-		$trigger_line = $throwable->getLine();
+		$trace = $throwable->getTrace();
+		$file  = $throwable->getFile();
+		$line  = $throwable->getLine();
 
-		// Only prepend trigger point if it's not already the first frame
-		$first_frame = $trace[0] ?? null;
-		$first_file  = $first_frame['file'] ?? null;
-		$first_line  = $first_frame['line'] ?? null;
-
-		if ( ! $first_frame || $first_file !== $trigger_file || $first_line !== $trigger_line ) {
-			$trigger_point = array(
-				'file' => $trigger_file,
-				'line' => $trigger_line,
-			);
-			$trace         = array_merge( array( $trigger_point ), $trace );
-		} else {
-			// If first frame is the trigger point, remove its args since they're error handler params
+		if ( ( $trace[0]['file'] ?? null ) === $file && ( $trace[0]['line'] ?? null ) === $line ) {
+			// First frame is the trigger point; its args are error handler params.
 			unset( $trace[0]['args'] );
+		} else {
+			array_unshift( $trace, compact( 'file', 'line' ) );
 		}
+
+		$superglobals = array_filter(
+			array(
+				'$_REQUEST' => $_REQUEST,
+				'$_SERVER'  => $_SERVER,
+				'$_FILES'   => $_FILES,
+				'$_COOKIE'  => $_COOKIE,
+				'$_SESSION' => $_SESSION ?? array(),
+			)
+		);
 
 		return array(
 			'message'      => $throwable->getMessage(),
 			'type'         => $this->get_error_type( $throwable ),
 			'stackTrace'   => $this->format_stack_trace( $trace ),
-			'superglobals' => $this->format_superglobals(),
-			'triggerPoint' => array(
-				'file' => $trigger_file,
-				'line' => $trigger_line,
-			),
+			'superglobals' => array_map( fn( $value ) => $this->process_array_value( $value, self::SUPERGLOBAL_ITEM_LIMIT ), $superglobals ),
+			'triggerPoint' => compact( 'file', 'line' ),
 		);
 	}
 
@@ -222,39 +164,18 @@ class Error_Page {
 	 * @param Throwable $throwable The throwable object.
 	 * @return string Error type name
 	 */
-	private function get_error_type( \Throwable $throwable ): string {
-		if ( $throwable instanceof \ErrorException ) {
-			$severity = $throwable->getSeverity();
-			switch ( $severity ) {
-				case E_ERROR:
-				case E_CORE_ERROR:
-				case E_COMPILE_ERROR:
-				case E_USER_ERROR:
-					return 'Fatal Error';
-				case E_WARNING:
-				case E_CORE_WARNING:
-				case E_COMPILE_WARNING:
-				case E_USER_WARNING:
-					return 'Warning';
-				case E_NOTICE:
-				case E_USER_NOTICE:
-					return 'Notice';
-				case E_DEPRECATED:
-				case E_USER_DEPRECATED:
-					return 'Deprecated';
-				case E_STRICT:
-					return 'Strict Notice';
-				case E_RECOVERABLE_ERROR:
-					return 'Recoverable Error';
-				default:
-					return 'Error';
-			}
+	private function get_error_type( Throwable $throwable ): string {
+		// Only fatal severities reach the page, so warnings/notices need no label.
+		if ( $throwable instanceof ErrorException ) {
+			return array(
+				E_PARSE             => 'Parse Error',
+				E_RECOVERABLE_ERROR => 'Recoverable Error',
+			)[ $throwable->getSeverity() ] ?? 'Fatal Error';
 		}
 
-		$parts = explode( '\\', get_class( $throwable ) );
+		$parts = explode( '\\', $throwable::class );
 		return end( $parts );
 	}
-
 
 	/**
 	 * Format stack trace for JavaScript consumption
@@ -267,34 +188,22 @@ class Error_Page {
 		$formatted = array();
 
 		foreach ( $trace as $frame ) {
-			if ( ! isset( $frame['file'] ) || ! is_readable( $frame['file'] ) ) {
-				continue;
-			}
-
-			$file_path = $frame['file'];
-
-			// Skip files outside WordPress installation.
-			if ( ABSPATH && 0 !== strpos( $file_path, ABSPATH ) ) {
+			// Skip internal frames and files outside the WordPress installation.
+			if ( ! isset( $frame['file'] ) || ! str_starts_with( $frame['file'], ABSPATH ) || ! is_readable( $frame['file'] ) ) {
 				continue;
 			}
 
 			$line = $frame['line'] ?? 0;
-			$args = $frame['args'] ?? array();
-
-			$snippet_data = $this->get_file_snippet( $file_path, $line );
 
 			$formatted[] = array(
-				'file'      => $this->normalize_path( $file_path ),
-				'filePath'  => $file_path,
-				'line'      => $line,
-				'startLine' => $snippet_data['startLine'],
-				'endLine'   => $snippet_data['endLine'],
-				'snippet'   => $snippet_data['snippet'],
-				'class'     => $frame['class'] ?? '',
-				'type'      => $frame['type'] ?? '',
-				'function'  => $frame['function'] ?? '',
-				'args'      => empty( $args ) ? array() : $this->process_array_value( $args ),
-			);
+				'file'     => $this->normalize_path( $frame['file'] ),
+				'filePath' => $frame['file'],
+				'line'     => $line,
+				'class'    => $frame['class'] ?? '',
+				'type'     => $frame['type'] ?? '',
+				'function' => $frame['function'] ?? '',
+				'args'     => $this->process_array_value( $frame['args'] ?? array() ),
+			) + $this->get_file_snippet( $frame['file'], $line );
 		}
 
 		return $formatted;
@@ -312,43 +221,19 @@ class Error_Page {
 		try {
 			$file = new SplFileObject( $file_path, 'r' );
 			$file->seek( PHP_INT_MAX );
-			$total_lines = $file->key() + 1;
+			$total = $file->key() + 1;
 
-			$line       = max( 1, min( $line, $total_lines ) );
-			$line_count = min( self::CONTEXT_LINE_COUNT, $total_lines );
-			$before     = (int) floor( ( $line_count - 1 ) / 2 );
-			$after      = $line_count - $before - 1;
-			$start_line = max( 1, $line - $before );
-			$end_line   = min( $total_lines, $line + $after );
-
-			if ( $end_line - $start_line + 1 < $line_count ) {
-				if ( 1 === $start_line ) {
-					$end_line = min( $total_lines, $start_line + $line_count - 1 );
-				} else {
-					$start_line = max( 1, $end_line - $line_count + 1 );
-				}
-			}
-
-			$file->seek( $start_line - 1 );
-
-			$snippet      = '';
-			$current_line = $start_line;
-
-			while ( ! $file->eof() && $current_line <= $end_line ) {
-				$snippet .= rtrim( (string) $file->current(), "\n" ) . "\n";
-				$file->next();
-				++$current_line;
-			}
-
-			// Unset file handle to free memory immediately.
-			unset( $file );
+			// Centre a fixed-size window on the line, sliding it back inside the file at either end.
+			$count = min( self::CONTEXT_LINE_COUNT, $total );
+			$start = max( 1, min( $line - intdiv( $count - 1, 2 ), $total - $count + 1 ) );
+			$lines = iterator_to_array( new LimitIterator( $file, $start - 1, $count ), false );
 
 			return array(
-				'startLine' => $start_line,
-				'endLine'   => $current_line - 1,
-				'snippet'   => rtrim( $snippet, "\n" ),
+				'startLine' => $start,
+				'endLine'   => $start + count( $lines ) - 1,
+				'snippet'   => rtrim( implode( '', $lines ), "\n" ),
 			);
-		} catch ( RuntimeException $e ) {
+		} catch ( RuntimeException ) {
 			return array(
 				'startLine' => max( 1, $line ),
 				'endLine'   => max( 1, $line ),
@@ -358,19 +243,14 @@ class Error_Page {
 	}
 
 	/**
-	 * Normalize file paths - convert to relative paths if within ABSPATH.
+	 * Convert a path inside ABSPATH to a relative one.
 	 *
 	 * @param string $path The path to normalize.
 	 *
 	 * @return string Normalized path.
 	 */
 	private function normalize_path( string $path ): string {
-		// Only process if it looks like a file path and is within ABSPATH.
-		if ( ABSPATH && 0 === strpos( $path, ABSPATH ) ) {
-			return substr( $path, strlen( ABSPATH ) );
-		}
-
-		return $path;
+		return str_starts_with( $path, ABSPATH ) ? substr( $path, strlen( ABSPATH ) ) : $path;
 	}
 
 	/**
@@ -383,13 +263,12 @@ class Error_Page {
 	 * @return mixed Processed data.
 	 */
 	private function process_array_value( $data, int $limit = 0, int $depth = 0 ) {
-		// Prevent excessive recursion depth.
-		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
-			return is_object( $data ) ? get_class( $data ) : '[Max depth reached]';
+		if ( is_object( $data ) ) {
+			return $data::class;
 		}
 
-		if ( is_object( $data ) ) {
-			return get_class( $data );
+		if ( $depth >= self::MAX_RECURSION_DEPTH ) {
+			return '[Max depth reached]';
 		}
 
 		if ( is_string( $data ) ) {
@@ -403,13 +282,11 @@ class Error_Page {
 
 		$count = count( $data );
 
-		// Trim if limit is set.
 		if ( $limit > 0 && $count > $limit ) {
 			$data                = array_slice( $data, 0, $limit, true );
 			$data['__truncated'] = sprintf( 'trimmed to first %d of %d entries', $limit, $count );
 		}
 
-		// Process nested values.
 		foreach ( $data as $key => $value ) {
 			$data[ $key ] = $this->process_array_value( $value, $limit, $depth + 1 );
 		}
@@ -418,57 +295,17 @@ class Error_Page {
 	}
 
 	/**
-	 * Format superglobals for JavaScript consumption
-	 *
-	 * @return array
-	 */
-	private function format_superglobals(): array {
-		$formatted = array();
-
-		$superglobals = array(
-			'$_REQUEST' => $_REQUEST,
-			'$_SERVER'  => $_SERVER,
-			'$_FILES'   => $_FILES,
-			'$_COOKIE'  => $_COOKIE,
-			'$_SESSION' => $_SESSION ?? array(),
-		);
-
-		foreach ( $superglobals as $name => $value ) {
-			if ( ! empty( $value ) ) {
-				$formatted[ $name ] = $this->trim_array( $value );
-			}
-		}
-
-		// Free memory.
-		unset( $superglobals );
-
-		return $formatted;
-	}
-
-	/**
-	 * Limit array size recursively to avoid duplicating very large superglobals.
-	 *
-	 * @param array $data Input array.
-	 *
-	 * @return array
-	 */
-	private function trim_array( array $data ): array {
-		return $this->process_array_value( $data, self::SUPERGLOBAL_ITEM_LIMIT );
-	}
-
-	/**
 	 * Shutdown handler to catch fatal errors WordPress style.
 	 *
 	 * @return void
 	 */
 	public function shutdown_handler(): void {
-		$last_error = error_get_last();
+		$error = error_get_last();
 
-		if ( null === $last_error || ! $this->is_fatal_error_type( $last_error['type'] ?? 0 ) ) {
+		if ( null === $error || ! ( self::FATAL_ERROR_TYPES & $error['type'] ) ) {
 			return;
 		}
 
-		$this->clean_output_buffers();
-		$this->handle( new ErrorException( $last_error['message'] ?? 'Fatal error', 0, $last_error['type'] ?? E_ERROR, $last_error['file'] ?? '', $last_error['line'] ?? 0 ) );
+		$this->handle( new ErrorException( $error['message'], 0, $error['type'], $error['file'], $error['line'] ) );
 	}
 }

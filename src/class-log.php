@@ -1,10 +1,8 @@
 <?php
 /**
- * Log Class with Singleton Pattern
+ * File logger with size-based rotation.
  *
- * Handles logging with support for log rotation and ensures a single instance of the logger.
- *
- * @package MyPluginNamespace
+ * @package DevKabir\WPDebugger
  */
 
 namespace DevKabir\WPDebugger;
@@ -15,6 +13,11 @@ namespace DevKabir\WPDebugger;
 class Log {
 
 	/**
+	 * Supported log levels.
+	 */
+	private const LEVELS = array( 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' );
+
+	/**
 	 * Path to the log file.
 	 *
 	 * @var string
@@ -22,37 +25,14 @@ class Log {
 	private string $log_file;
 
 	/**
-	 * Maximum file size in bytes before rotation.
+	 * Set up the logger.
 	 *
-	 * @var int
-	 */
-	private int $max_file_size;
-
-	/**
-	 * Number of backup files to keep.
-	 *
-	 * @var int
-	 */
-	private int $backup_files;
-
-	/**
-	 * Supported log levels.
-	 *
-	 * @var array
-	 */
-	private array $log_levels = array( 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' );
-
-	/**
-	 * Private constructor to prevent direct instantiation.
-	 *
-	 * @param string $file_path Path to the log file.
+	 * @param string $file_path     File name inside wp-content/logs.
 	 * @param int    $max_file_size Maximum file size in bytes before rotation.
-	 * @param int    $backup_files Number of backup files to keep.
+	 * @param int    $backup_files  Number of backup files to keep.
 	 */
-	public function __construct( string $file_path = '0-debugger.log', int $max_file_size = 1048576, int $backup_files = 5 ) {
-		$this->log_file      = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $file_path;
-		$this->max_file_size = $max_file_size;
-		$this->backup_files  = $backup_files;
+	public function __construct( string $file_path = '0-debugger.log', private int $max_file_size = 1048576, private int $backup_files = 5 ) {
+		$this->log_file = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $file_path;
 	}
 
 	/**
@@ -65,63 +45,35 @@ class Log {
 	 */
 	public function write( $message, string $level = 'INFO' ) {
 		$level = strtoupper( $level );
+		$level = in_array( $level, self::LEVELS, true ) ? $level : 'INFO';
 
-		if ( ! in_array( $level, $this->log_levels, true ) ) {
-			$level = 'INFO';
-		}
-
-		$timestamp = gmdate( 'Y-m-d H:i:s' );
-
-		$log_entry = sprintf(
-			'[%s] [%s]: %s%s',
-			$timestamp,
-			$level,
-			debugger_format_variable( $message ),
-			PHP_EOL
-		);
-
-		// Rotate the log file if necessary.
 		$this->rotate_log_file();
 
-		// Write the log entry to the file.
-		if ( ! file_exists( dirname( $this->log_file ) ) ) {
+		if ( ! is_dir( dirname( $this->log_file ) ) ) {
 			mkdir( dirname( $this->log_file ), 0775, true );
 		}
-		file_put_contents( $this->log_file, $log_entry, FILE_APPEND | LOCK_EX );
+
+		file_put_contents( $this->log_file, sprintf( '[%s] [%s]: %s%s', gmdate( 'Y-m-d H:i:s' ), $level, debugger_format_variable( $message ), PHP_EOL ), FILE_APPEND | LOCK_EX );
 	}
 
 	/**
-	 * Rotates the log file if it exceeds the maximum file size.
+	 * Rotates the log file if it exceeds the maximum file size: log => log.1 => log.2 ... and the oldest is overwritten.
 	 *
 	 * @return void
 	 */
 	private function rotate_log_file() {
-		if ( ! file_exists( $this->log_file ) ) {
+		if ( ! file_exists( $this->log_file ) || filesize( $this->log_file ) < $this->max_file_size ) {
 			return;
 		}
-		if ( filesize( $this->log_file ) >= $this->max_file_size ) {
-			// Remove the oldest backup file if it exists.
-			$oldest_backup = $this->log_file . '.' . $this->backup_files;
-			if ( file_exists( $oldest_backup ) ) {
-				unlink( $oldest_backup );
+
+		// rename() replaces an existing target, so the oldest backup is dropped by the first shift.
+		for ( $i = $this->backup_files - 1; $i >= 1; $i-- ) {
+			if ( file_exists( "{$this->log_file}.{$i}" ) ) {
+				rename( "{$this->log_file}.{$i}", "{$this->log_file}." . ( $i + 1 ) );
 			}
-
-			// Shift existing backup files up by one.
-			for ( $i = $this->backup_files - 1; $i >= 1; $i-- ) {
-				$current_backup = $this->log_file . '.' . $i;
-				$next_backup    = $this->log_file . '.' . ( $i + 1 );
-				if ( file_exists( $current_backup ) ) {
-					rename( $current_backup, $next_backup );
-				}
-			}
-
-			// Rename the current log file to the first backup.
-			$first_backup = $this->log_file . '.1';
-			rename( $this->log_file, $first_backup );
-
-			// Create a new empty log file.
-			touch( $this->log_file );
 		}
+
+		rename( $this->log_file, "{$this->log_file}.1" );
 	}
 
 	/**

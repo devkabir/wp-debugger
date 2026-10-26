@@ -18,12 +18,21 @@ use WP_Error;
 class Http {
 
 	/**
+	 * Headers cURL actually sent for the current request, including the ones cURL adds itself.
+	 *
+	 * @var array
+	 */
+	private array $request_headers = array();
+
+	/**
 	 * Constructor for the Http class.
 	 *
 	 * Initializes the HTTP API debugging by adding an action hook that logs requests and responses.
 	 */
 	public function __construct() {
 		add_action( 'http_api_debug', array( $this, 'debug_api' ), 10, 5 );
+		add_action( 'http_api_curl', array( $this, 'enable_request_header_capture' ) );
+		add_action( 'requests-curl.after_request', array( $this, 'capture_request_headers' ), 10, 2 );
 
 		if ( defined( 'ENABLE_MOCK_HTTP_INTERCEPTOR' ) && ENABLE_MOCK_HTTP_INTERCEPTOR ) {
 			add_filter( 'pre_http_request', array( $this, 'intercept_http_requests' ), 10, 3 );
@@ -40,7 +49,7 @@ class Http {
 	 * @return array|bool|string|WP_Error Mock response or false to allow original request.
 	 */
 	public function intercept_http_requests( $preempt, array $args, string $url ) {
-		if ( \strpos( $url, \site_url() ) !== false ) {
+		if ( str_contains( $url, \site_url() ) ) {
 			return $preempt;
 		}
 
@@ -96,6 +105,32 @@ class Http {
 	}
 
 	/**
+	 * Tells cURL to keep the request headers it sends.
+	 *
+	 * @param resource|\CurlHandle $handle cURL handle.
+	 */
+	public function enable_request_header_capture( $handle ): void {
+		$this->request_headers = array();
+		curl_setopt( $handle, CURLINFO_HEADER_OUT, true );
+	}
+
+	/**
+	 * Stores the exact request headers cURL sent.
+	 *
+	 * @param string $headers Raw response headers.
+	 * @param array  $info    curl_getinfo() result. For non-blocking requests core passes the request args here instead.
+	 */
+	public function capture_request_headers( $headers, $info = array() ): void {
+		// Skip the request line ("POST /path HTTP/1.1"), keep header names exactly as sent.
+		foreach ( array_slice( explode( "\r\n", $info['request_header'] ?? '' ), 1 ) as $line ) {
+			if ( str_contains( $line, ':' ) ) {
+				list( $name, $value )           = explode( ':', $line, 2 );
+				$this->request_headers[ $name ] = trim( $value );
+			}
+		}
+	}
+
+	/**
 	 * Logs HTTP API requests and responses to a debug log.
 	 *
 	 * @param array|\WP_Error $response    HTTP response or \WP_Error object.
@@ -105,7 +140,10 @@ class Http {
 	 * @param string          $url         The request URL.
 	 */
 	public function debug_api( $response, $context, $class, $parsed_args, $url ): void {
-		if ( \strpos( $url, \site_url() ) !== false ) {
+		$sent_headers          = $this->request_headers;
+		$this->request_headers = array();
+
+		if ( str_contains( $url, \site_url() ) ) {
 			return;
 		}
 
@@ -119,12 +157,11 @@ class Http {
 			'method'       => $parsed_args['method'] ?? 'GET',
 			'timeout'      => $parsed_args['timeout'] ?? 5,
 			'request_data' => array(
-				'body' => $sanitized_body,
+				// Falls back to caller headers when cURL never sent the request (early WP error, cURL error, Streams transport).
+				'headers' => $sent_headers ?: $sanitized_headers,
+				'body'    => $sanitized_body,
 			),
 		);
-		if ( defined( 'WP_DEVELOPMENT_MODE' ) ) {
-			$base_data['request_data']['headers']['Authorization'] = $sanitized_headers['Authorization'] ?? null;
-		}
 		if ( is_wp_error( $response ) ) {
 			$error_data          = $base_data;
 			$error_data['error'] = array(

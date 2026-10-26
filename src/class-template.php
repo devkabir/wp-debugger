@@ -16,14 +16,14 @@ class Template {
 	 * @throws \RuntimeException If the template file doesn't exist.
 	 */
 	public static function render( string $template, array $data = array() ): void {
-		$path = plugin_dir_path( FILE ) . "templates/{$template}.php";
+		$path = dirname( __DIR__ ) . "/templates/{$template}.php";
 
 		if ( ! file_exists( $path ) ) {
 			throw new \RuntimeException( "Template {$template} not found" );
 		}
 
-		// Extract variables so they are accessible inside the PHP template.
-		extract( $data ); // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		// EXTR_SKIP: a data key like "path" must not replace the file we include.
+		extract( $data, EXTR_SKIP ); // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
 		include $path;
 	}
 }
