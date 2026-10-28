@@ -42,6 +42,8 @@ class Http {
 	/**
 	 * Intercepts outgoing HTTP requests and serves mock responses for predefined URLs.
 	 *
+	 * Active only when ENABLE_MOCK_HTTP_INTERCEPTOR is true. Unmatched URLs are logged via write_log() (functions.php, writes 0-debugger.log).
+	 *
 	 * @param bool|array $preempt The preemptive response to return if available.
 	 * @param array      $args Array of HTTP request arguments, including method and body.
 	 * @param string     $url The URL of the outgoing HTTP request.
@@ -133,6 +135,10 @@ class Http {
 	/**
 	 * Logs HTTP API requests and responses to a debug log.
 	 *
+	 * Skips requests to site_url(). Errors go to <host>-errors.log, others to <host>-requests.log.
+	 * Uses Log (src/class-log.php) and recursively_decode_json() (functions.php: decodes any valid JSON string, recursively).
+	 * Request body: nested JSON decoded, not truncated. Response body: JSON decoded, or the first 10KB as a raw string when larger.
+	 *
 	 * @param array|\WP_Error $response    HTTP response or \WP_Error object.
 	 * @param string          $context     Context under which the hook is fired.
 	 * @param string          $class       HTTP transport used.
@@ -149,7 +155,8 @@ class Http {
 
 		$domain = wp_parse_url( $url, PHP_URL_HOST ) ?? 'unknown';
 
-		$sanitized_body    = $parsed_args['body'];
+		// Nested JSON (e.g. scan_data) is logged as data instead of a double-escaped string.
+		$sanitized_body    = recursively_decode_json( $parsed_args['body'] );
 		$sanitized_headers = $parsed_args['headers'] ?? array();
 
 		$base_data = array(
@@ -181,7 +188,8 @@ class Http {
 		$success_data['response'] = array(
 			'code'    => $response_code,
 			'message' => wp_remote_retrieve_response_message( $response ),
-			'body'    => json_decode( $response_body ),
+			// Update checks and similar bodies run to tens of KB; the head is enough to identify them.
+			'body'    => strlen( $response_body ) > 10000 ? substr( $response_body, 0, 10000 ) . sprintf( '... [truncated, %d bytes total]', strlen( $response_body ) ) : json_decode( $response_body ),
 		);
 
 		$log_level = 'INFO';

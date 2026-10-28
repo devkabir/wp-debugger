@@ -25,6 +25,10 @@ class Query_Detector {
 	/**
 	 * Inspect collected queries and report repeated patterns and slow queries.
 	 *
+	 * Runs on shutdown. Each query is cut to 2000 chars before grouping and logging. Writes query-detector.log
+	 * via Log (src/class-log.php) only when something is flagged. is_terminal_request() (functions.php) picks
+	 * CLI output vs. the admin-notice transient.
+	 *
 	 * @return void
 	 */
 	public function detect_and_report(): void {
@@ -42,6 +46,9 @@ class Query_Detector {
 
 		foreach ( $wpdb->queries as $query ) {
 			list( $sql, $time, $caller ) = $query;
+
+			// Bulk INSERTs of large options can be megabytes; the head is enough to identify them.
+			$sql = substr( $sql, 0, 2000 );
 
 			if ( $needles && ! array_filter( $needles, static fn( $needle ) => str_contains( $caller, (string) $needle ) ) ) {
 				continue;
